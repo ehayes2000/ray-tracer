@@ -7,32 +7,18 @@ mod sphere;
 mod vec3;
 
 use color::write_color;
-use hittable::{Hit, HitRecord};
+use hittable::Hit;
 use hittable_list::HittableList;
-use ray::{Point3, Ray};
+use ray::Ray;
 use sphere::Sphere;
 use std::io::stdout;
-use vec3::{Color, Vec3, dot, unit_vector};
-
-// fn hit_sphere(center: Point3, radius: f64, r: &Ray) -> Option<f64> {
-//     let oc = center - r.origin;
-//     let a = r.direction.len_squared();
-//     let h = dot(&r.direction, &oc);
-//     let c = oc.len_squared() - (radius * radius);
-//     let descriminent = h * h - a * c;
-//     if descriminent < 0. {
-//         None
-//     } else {
-//         Some(h - f64::sqrt(descriminent) / a)
-//     }
-// }
+use vec3::{Color, Vec3, unit_vector};
 
 fn ray_color<T>(r: &Ray, world: T) -> Color
 where
     T: Hit,
 {
-    let rec = HitRecord::zero();
-    if let Some(t) = world.hit(r, 0., f64::MAX, rec) {
+    if let Some(t) = world.hit(r, 0., f64::MAX) {
         return 0.5 * (t.normal + Color::one());
     }
     let unit_dir = unit_vector(&r.direction);
@@ -56,10 +42,7 @@ fn main() {
 
     let pixel_delta_u = viewport_u / image_width as f64;
     let pixel_delta_v = viewport_v / image_height as f64;
-    // eprintln!("viewport width {}", viewport_width);
-    // eprintln!("viewport height {}", viewport_height);
-    // eprintln!("width delta {}", pixel_delta_u);
-    // eprintln!("height delta {}", pixel_delta_v);
+
     let viewport_upper_left =
         camera_center - Vec3(0., 0., focal_length) - (viewport_u / 2.) - (viewport_v / 2.);
 
@@ -86,9 +69,6 @@ fn main() {
             };
 
             let pixel_color = ray_color(&r, &world);
-            // if pixel_color == Vec3(1., 0., 0.) {
-            //     eprintln!("{}", pixel_center);
-            // }
 
             write_color(&mut stdout, &pixel_color).expect("write color");
         }

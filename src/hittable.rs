@@ -21,15 +21,17 @@ impl HitRecord {
 }
 
 impl HitRecord {
-    pub fn set_face_normal(&mut self, r: &Ray, outward_normal: &Vec3) {
-        self.front_face = dot(&r.direction, outward_normal) < 0.;
-        self.normal = if self.front_face {
-            *outward_normal
-        } else {
-            -outward_normal
-        };
+    pub fn with_normal(p: Vec3, r: &Ray, u_out_norm: Vec3, t: f64) -> Self {
+        let front_face = dot(&r.direction, &u_out_norm) < 0.0;
+        let normal = if front_face { u_out_norm } else { -u_out_norm };
+        Self {
+            front_face,
+            p,
+            normal,
+            t,
+        }
     }
 }
 pub trait Hit {
-    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64, rec: HitRecord) -> Option<HitRecord>;
+    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord>;
 }

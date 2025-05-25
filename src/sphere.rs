@@ -1,6 +1,6 @@
 use super::hittable::{Hit, HitRecord};
 use super::ray::Ray;
-use super::vec3::{Point, Vec3, dot};
+use super::vec3::{Point, dot};
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
@@ -13,7 +13,7 @@ impl Sphere {
 }
 
 impl Hit for Sphere {
-    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64, mut rec: HitRecord) -> Option<HitRecord> {
+    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
         let oc = self.center - r.origin;
         let a = r.direction.len_squared();
         let h = dot(&r.direction, &oc);
@@ -44,13 +44,9 @@ impl Hit for Sphere {
             })
             // using the bounded root return a HitRecord
             .map(|root| {
-                let p = r.at(rec.t);
-                let outward_normal = (rec.p - self.center) / self.radius;
-                rec.t = root;
-                rec.p = p;
-                rec.normal = (p - self.center) / self.radius;
-                rec.set_face_normal(r, &outward_normal);
-                rec
+                let p = r.at(root);
+                let normal = (p - self.center) / self.radius;
+                HitRecord::with_normal(p, &r, normal, root)
             })
     }
 }
