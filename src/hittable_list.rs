@@ -1,6 +1,6 @@
 use super::hittable::{Hit, HitRecord};
+use super::interval::Interval;
 use super::ray::Ray;
-use super::vec3::Vec3;
 
 pub struct HittableList {
     pub objects: Vec<Box<dyn Hit>>,
@@ -23,11 +23,11 @@ impl<T> Hit for T
 where
     T: std::ops::Deref<Target = HittableList>,
 {
-    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
+    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let mut any_hit = None::<HitRecord>;
-        let mut closest_so_far = ray_tmax;
+        let mut closest_so_far = ray_t.max;
         for object in &self.objects {
-            if let Some(hit) = object.hit(r, ray_tmin, closest_so_far) {
+            if let Some(hit) = object.hit(r, &Interval::new(ray_t.min, closest_so_far)) {
                 closest_so_far = hit.t;
                 any_hit = Some(hit);
             }

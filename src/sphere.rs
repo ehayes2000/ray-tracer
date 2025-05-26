@@ -1,4 +1,5 @@
 use super::hittable::{Hit, HitRecord};
+use super::interval::Interval;
 use super::ray::Ray;
 use super::vec3::{Point, dot};
 pub struct Sphere {
@@ -13,7 +14,7 @@ impl Sphere {
 }
 
 impl Hit for Sphere {
-    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
+    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let oc = self.center - r.origin;
         let a = r.direction.len_squared();
         let h = dot(&r.direction, &oc);
@@ -27,26 +28,26 @@ impl Hit for Sphere {
         Some((h - sqrtd) / a)
             // if this root is in bounds use it
             .and_then(|root| {
-                if root <= ray_tmin || ray_tmax <= root {
-                    None
-                } else {
+                if ray_t.surrounds(root) {
                     Some(root)
+                } else {
+                    None
                 }
             })
             // or else check the other root
             .or_else(|| {
                 let root = (h + sqrtd) / a;
-                if root <= ray_tmin || ray_tmax <= root {
-                    None
-                } else {
+                if ray_t.surrounds(root) {
                     Some(root)
+                } else {
+                    None
                 }
             })
             // using the bounded root return a HitRecord
             .map(|root| {
                 let p = r.at(root);
                 let normal = (p - self.center) / self.radius;
-                HitRecord::with_normal(p, &r, normal, root)
+                HitRecord::with_normal(p, r, normal, root)
             })
     }
 }

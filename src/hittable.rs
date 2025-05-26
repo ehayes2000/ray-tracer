@@ -1,6 +1,10 @@
+use super::interval::Interval;
 use super::ray::Ray;
 use super::vec3::{Point, Vec3, dot};
 
+pub trait Hit {
+    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord>;
+}
 #[derive(Clone)]
 pub struct HitRecord {
     pub p: Point,
@@ -31,7 +35,4 @@ impl HitRecord {
             t,
         }
     }
-}
-pub trait Hit {
-    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord>;
 }
