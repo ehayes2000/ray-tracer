@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use crate::math::{random, random_f64};
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Vec3(pub f64, pub f64, pub f64);
 pub type Point = Vec3;
@@ -32,6 +34,34 @@ impl Vec3 {
 
     pub fn one() -> Self {
         Vec3(1., 1., 1.)
+    }
+
+    pub fn unit_random() -> Self {
+        loop {
+            let v = Self::random_mm(-1.0, 1.0);
+
+            let lensq = v.len_squared();
+            if 1e-160 < lensq && lensq <= 1.0 {
+                return v / f64::sqrt(lensq);
+            }
+        }
+    }
+
+    pub fn random_mm(min: f64, max: f64) -> Self {
+        Vec3(
+            random_f64(min, max),
+            random_f64(min, max),
+            random_f64(min, max),
+        )
+    }
+
+    pub fn random_from_normal(normal: &Vec3) -> Self {
+        let random = Self::unit_random();
+        if dot(&random, normal) < 0.0 {
+            -random
+        } else {
+            random
+        }
     }
 }
 
