@@ -1,15 +1,22 @@
 use super::hittable::{Hit, HitRecord};
 use super::interval::Interval;
+use super::material::Material;
 use super::ray::Ray;
 use super::vec3::{Point, dot};
+use std::rc::Rc;
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
+    pub material: Rc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new_boxed(center: Point, radius: f64) -> Box<dyn Hit> {
-        Box::new(Self { center, radius })
+    pub fn new_boxed(center: Point, radius: f64, material: Rc<dyn Material>) -> Box<dyn Hit> {
+        Box::new(Self {
+            center,
+            radius,
+            material,
+        })
     }
 }
 
@@ -47,7 +54,7 @@ impl Hit for Sphere {
             .map(|root| {
                 let p = r.at(root);
                 let normal = (p - self.center) / self.radius;
-                HitRecord::with_normal(p, r, normal, root)
+                HitRecord::with_normal(p, r, normal, root, Rc::clone(&self.material))
             })
     }
 }

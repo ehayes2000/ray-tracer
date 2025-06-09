@@ -63,6 +63,18 @@ impl Vec3 {
             random
         }
     }
+
+    pub fn near_zero(&self) -> bool {
+        let e = 1e-8;
+        self.0.abs() < e && self.1.abs() < e && self.2.abs() < e
+    }
+
+    // inline vec3 reflect(const vec3& v, const vec3& n) {
+    //     return v - 2*dot(v,n)*n;
+    // }
+    pub fn reflect(&self, normal: &Self) -> Self {
+        self - 2. * dot(self, normal) * normal
+    }
 }
 
 impl Display for Vec3 {
@@ -330,6 +342,12 @@ fn test_multiply() {
     assert_eq!(b, expected)
 }
 
+impl Mul for Vec3 {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(self.0 * rhs.0, self.1 * rhs.1, self.2 * rhs.2)
+    }
+}
 impl MulAssign<f64> for Vec3 {
     fn mul_assign(&mut self, rhs: f64) {
         self.0 *= rhs;

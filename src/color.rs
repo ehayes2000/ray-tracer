@@ -9,12 +9,11 @@ static INTENSITY: Interval = Interval {
 };
 
 fn linear_to_gamma(component: f64) -> f64 {
-    component
-    // if component > 0.0 {
-    //     f64::sqrt(component)
-    // } else {
-    //     component
-    // }
+    if component > 0.0 {
+        f64::sqrt(component)
+    } else {
+        component
+    }
 }
 
 pub fn write_color<F>(f: &mut F, color: &Color) -> Result<(), std::io::Error>

@@ -91,13 +91,15 @@ impl Camera {
         if remaining_bounces == 0 {
             return Vec3::zero();
         }
+        // ray hit something
         if let Some(hit) = world.hit(r, &Interval::new(0.001, f64::MAX)) {
-            let direction = hit.normal + Vec3::unit_random();
-            let ray = Ray {
-                direction,
-                origin: hit.p,
-            };
-            0.5 * self.ray_color(&ray, world, remaining_bounces - 1)
+            // something reflected ray
+            if let Some(scatter) = hit.material.scatter(r, &hit) {
+                scatter.color_attenuation
+                    * self.ray_color(&scatter.ray, world, remaining_bounces - 1)
+            } else {
+                Color::zero()
+            }
         } else {
             let unit_direction = unit_vector(&r.direction);
             let a = 0.5 * (unit_direction.1 + 1.0);
