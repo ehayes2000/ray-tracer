@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::math::{random, random_f64};
+use crate::math::random_f64;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Vec3(pub f64, pub f64, pub f64);
@@ -64,16 +64,29 @@ impl Vec3 {
         }
     }
 
+    pub fn random_on_hemisphere(normal: &Vec3) -> Self {
+        let on_unit = Self::unit_random();
+        if dot(&on_unit, normal) > 0.0 {
+            on_unit
+        } else {
+            -on_unit
+        }
+    }
+
     pub fn near_zero(&self) -> bool {
         let e = 1e-8;
         self.0.abs() < e && self.1.abs() < e && self.2.abs() < e
     }
 
-    // inline vec3 reflect(const vec3& v, const vec3& n) {
-    //     return v - 2*dot(v,n)*n;
-    // }
     pub fn reflect(&self, normal: &Self) -> Self {
         self - 2. * dot(self, normal) * normal
+    }
+
+    pub fn refract(&self, n: &Vec3, etai_over_etat: f64) -> Self {
+        let cos_theta = f64::min(dot(&-self, n), 1.0);
+        let r_out_perp = etai_over_etat * (self + cos_theta * n);
+        let r_out_parallel = -f64::sqrt(f64::abs(1.0 - r_out_perp.len_squared())) * n;
+        r_out_perp + r_out_parallel
     }
 }
 
@@ -99,16 +112,6 @@ pub fn unit_vector(v: &Vec3) -> Vec3 {
     v / v.len()
 }
 
-/*
- *   Operator Overloads
- */
-
-/*
- * -----------------------------------------------------------------------------
- * ADD
- * -----------------------------------------------------------------------------
-**/
-// V += &V
 impl AddAssign<&Vec3> for Vec3 {
     fn add_assign(&mut self, rhs: &Vec3) {
         self.0 += rhs.0;
@@ -117,14 +120,12 @@ impl AddAssign<&Vec3> for Vec3 {
     }
 }
 
-// V += V
 impl AddAssign for Vec3 {
     fn add_assign(&mut self, rhs: Vec3) {
         *self += &rhs;
     }
 }
 
-// &V + &V
 impl Add for &Vec3 {
     type Output = Vec3;
     fn add(self, rhs: Self) -> Self::Output {
@@ -132,7 +133,6 @@ impl Add for &Vec3 {
     }
 }
 
-// V + V
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(mut self, rhs: Self) -> Self::Output {
@@ -141,7 +141,6 @@ impl Add for Vec3 {
     }
 }
 
-// V + &V
 impl Add<&Vec3> for Vec3 {
     type Output = Vec3;
     fn add(mut self, rhs: &Vec3) -> Self::Output {
@@ -150,7 +149,6 @@ impl Add<&Vec3> for Vec3 {
     }
 }
 
-// &V + V
 impl Add<Vec3> for &Vec3 {
     type Output = Vec3;
     fn add(self, mut rhs: Vec3) -> Self::Output {
@@ -189,19 +187,6 @@ fn test_add() {
     assert_eq!(&b + &a, expected);
 }
 
-/*
- * -----------------------------------------------------------------------------
- * END ADD
- * -----------------------------------------------------------------------------
-**/
-
-/*
- * -----------------------------------------------------------------------------
- * SUBTRACT
- * -----------------------------------------------------------------------------
-**/
-
-// T -= T
 impl SubAssign for Vec3 {
     fn sub_assign(&mut self, rhs: Self) {
         self.0 -= rhs.0;
@@ -210,7 +195,6 @@ impl SubAssign for Vec3 {
     }
 }
 
-// &T - &T
 impl Sub for &Vec3 {
     type Output = Vec3;
     fn sub(self, rhs: Self) -> Self::Output {
@@ -218,7 +202,6 @@ impl Sub for &Vec3 {
     }
 }
 
-// T - &T
 impl Sub<&Vec3> for Vec3 {
     type Output = Vec3;
     fn sub(mut self, rhs: &Vec3) -> Self::Output {
@@ -227,7 +210,6 @@ impl Sub<&Vec3> for Vec3 {
     }
 }
 
-// &T - T
 impl Sub<Vec3> for &Vec3 {
     type Output = Vec3;
     fn sub(self, rhs: Vec3) -> Self::Output {
@@ -235,7 +217,6 @@ impl Sub<Vec3> for &Vec3 {
     }
 }
 
-// T - T
 impl Sub for Vec3 {
     type Output = Vec3;
     fn sub(mut self, rhs: Self) -> Self::Output {
@@ -278,13 +259,6 @@ fn test_negate() {
     assert_eq!(&a - &b, Vec3::zero());
     assert_eq!(&b - &a, Vec3::zero());
 }
-/*
- * END NEGATE
-**/
-
-/*
- * DIVIDE
-**/
 
 #[cfg(test)]
 #[test]
@@ -321,13 +295,6 @@ impl Div<f64> for Vec3 {
     }
 }
 
-/*
- * END DIVIDE
-**/
-
-/*
- * MULTIPLY
-**/
 #[cfg(test)]
 #[test]
 fn test_multiply() {
@@ -384,7 +351,3 @@ impl Mul<&Vec3> for f64 {
         *rhs * self
     }
 }
-
-/*
- * END MULTIPLY
-**/

@@ -11,7 +11,7 @@ impl Lambertian {
         Self { albedo }
     }
 
-    pub fn new_rc(albedo: Color) -> Rc<dyn Material> {
+    pub fn obj(albedo: Color) -> Rc<dyn Material> {
         let lambertian = Self::new(albedo);
         Rc::new(lambertian)
     }

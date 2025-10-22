@@ -91,6 +91,7 @@ impl Camera {
         if remaining_bounces == 0 {
             return Vec3::zero();
         }
+
         // ray hit something
         if let Some(hit) = world.hit(r, &Interval::new(0.001, f64::MAX)) {
             // something reflected ray

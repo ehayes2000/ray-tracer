@@ -11,12 +11,15 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new_boxed(center: Point, radius: f64, material: Rc<dyn Material>) -> Box<dyn Hit> {
-        Box::new(Self {
+    pub fn new(center: Point, radius: f64, material: Rc<dyn Material>) -> Self {
+        Self {
             center,
             radius,
             material,
-        })
+        }
+    }
+    pub fn obj(center: Point, radius: f64, material: Rc<dyn Material>) -> Box<dyn Hit> {
+        Box::new(Self::new(center, radius, material))
     }
 }
 

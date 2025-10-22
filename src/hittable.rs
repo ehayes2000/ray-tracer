@@ -7,6 +7,7 @@ use std::rc::Rc;
 pub trait Hit {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord>;
 }
+
 #[derive(Clone)]
 pub struct HitRecord {
     pub p: Point,

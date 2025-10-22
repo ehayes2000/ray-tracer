@@ -1,3 +1,2 @@
-pic: 
+pic:
 	cargo run > image.ppm
-
