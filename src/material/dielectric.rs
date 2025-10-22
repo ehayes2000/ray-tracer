@@ -1,14 +1,15 @@
 use super::Material;
 use super::Scatter;
+use crate::math::random;
 use crate::vec3::{dot, unit_vector};
 use crate::{HitRecord, Ray, Vec3};
 use std::rc::Rc;
 
-pub struct Dialectic {
+pub struct Dielectric {
     refraction_index: f64,
 }
 
-impl Dialectic {
+impl Dielectric {
     pub fn new(refraction_index: f64) -> Self {
         Self { refraction_index }
     }
@@ -16,9 +17,15 @@ impl Dialectic {
     pub fn obj(refraction_index: f64) -> Rc<dyn Material> {
         Rc::new(Self::new(refraction_index))
     }
+
+    fn reflectance(&self, cosine: f64) -> f64 {
+        let r0 = (1.0 - self.refraction_index) / (1.0 + self.refraction_index);
+        let r0 = r0 * r0;
+        r0 + (1.0 - r0) * f64::powi(1.0 - cosine, 5)
+    }
 }
 
-impl Material for Dialectic {
+impl Material for Dielectric {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<Scatter> {
         let attenuation = Vec3(1.0, 1.0, 1.0);
         let unit_direction = unit_vector(&r_in.direction);
@@ -29,22 +36,18 @@ impl Material for Dialectic {
         };
         let cos_theta = f64::min(dot(&-unit_direction, &rec.normal), 1.0);
         let sin_theta = f64::sqrt(1.0 - cos_theta * cos_theta);
-        if ri * sin_theta > 1.0 {
-            Some(Scatter {
-                color_attenuation: attenuation,
-                ray: Ray {
-                    direction: unit_direction.reflect(&rec.normal),
-                    origin: rec.p,
-                },
-            })
+        let direction = if ri * sin_theta > 1.0 || self.reflectance(cos_theta) > random() {
+            unit_direction.reflect(&rec.normal)
         } else {
-            Some(Scatter {
-                color_attenuation: attenuation,
-                ray: Ray {
-                    direction: unit_direction.refract(&rec.normal, ri),
-                    origin: rec.p,
-                },
-            })
-        }
+            unit_direction.refract(&rec.normal, ri)
+        };
+
+        Some(Scatter {
+            color_attenuation: attenuation,
+            ray: Ray {
+                direction: direction,
+                origin: rec.p,
+            },
+        })
     }
 }

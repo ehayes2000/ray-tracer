@@ -1,8 +1,8 @@
-mod dialectic;
+mod dielectric;
 mod lambertian;
 mod metal;
 
-pub use dialectic::Dialectic;
+pub use dielectric::Dielectric;
 pub use lambertian::Lambertian;
 pub use metal::Metal;
 

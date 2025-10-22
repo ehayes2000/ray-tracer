@@ -21,7 +21,7 @@ fn main() {
     const ASPECT_RATIO: f64 = 16. / 9.;
     let image_width = 400;
     let ground = material::Lambertian::obj(Vec3(0.8, 0.8, 0.0));
-    let left = material::Dialectic::obj(1.0 / 1.333);
+    let left = material::Dielectric::obj(1.0 / 1.333);
     let center = material::Lambertian::obj(Vec3(0.1, 0.2, 0.5));
     let right = material::Metal::obj(Vec3(0.8, 0.6, 0.2), 1.0);
 
