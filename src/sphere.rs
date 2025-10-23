@@ -61,3 +61,10 @@ impl Hit for Sphere {
             })
     }
 }
+
+#[macro_export]
+macro_rules! ball {
+    ($pt:expr, $r:expr, $m:expr) => {
+        Sphere::obj($pt, $r, $m)
+    };
+}

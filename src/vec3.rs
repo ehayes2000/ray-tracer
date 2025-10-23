@@ -351,3 +351,10 @@ impl Mul<&Vec3> for f64 {
         *rhs * self
     }
 }
+
+#[macro_export]
+macro_rules! v3 {
+    ($x:expr, $y:expr, $z:expr) => {
+        Vec3($x as f64, $y as f64, $z as f64)
+    };
+}
