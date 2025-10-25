@@ -1,7 +1,14 @@
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::math::random_f64;
+use crate::math::{random, random_f64};
+
+#[macro_export]
+macro_rules! v3 {
+    ($x:expr, $y:expr, $z:expr) => {
+        Vec3($x as f64, $y as f64, $z as f64)
+    };
+}
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Vec3(pub f64, pub f64, pub f64);
@@ -70,6 +77,15 @@ impl Vec3 {
             on_unit
         } else {
             -on_unit
+        }
+    }
+
+    pub fn random_on_disk() -> Self {
+        loop {
+            let p = v3!(random(), random(), 0);
+            if p.len_squared() < 1.0 {
+                return p;
+            }
         }
     }
 
@@ -350,11 +366,4 @@ impl Mul<&Vec3> for f64 {
     fn mul(self, rhs: &Vec3) -> Self::Output {
         *rhs * self
     }
-}
-
-#[macro_export]
-macro_rules! v3 {
-    ($x:expr, $y:expr, $z:expr) => {
-        Vec3($x as f64, $y as f64, $z as f64)
-    };
 }

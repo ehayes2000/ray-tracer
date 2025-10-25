@@ -16,10 +16,7 @@ fn linear_to_gamma(component: f64) -> f64 {
     }
 }
 
-pub fn write_color<F>(f: &mut F, color: &Color) -> Result<(), std::io::Error>
-where
-    F: Write,
-{
+pub fn write_color(f: &mut impl Write, color: &Color) -> Result<(), std::io::Error> {
     let r = linear_to_gamma(color.0);
     let g = linear_to_gamma(color.1);
     let b = linear_to_gamma(color.2);
