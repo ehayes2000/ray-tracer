@@ -1,8 +1,9 @@
 use super::Material;
 use super::Scatter;
+use crate::hittable::HitRecord;
 use crate::math::random;
-use crate::vec3::{dot, unit_vector};
-use crate::{HitRecord, Ray, Vec3};
+use crate::ray::Ray;
+use crate::vec3::{Vec3, dot, unit_vector};
 use std::rc::Rc;
 
 pub struct Dielectric {

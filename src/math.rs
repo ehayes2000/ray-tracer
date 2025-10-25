@@ -7,6 +7,7 @@ pub fn degrees_to_radians(degrees: f64) -> f64 {
 pub fn random() -> f64 {
     rand::rng().random()
 }
+
 pub fn random_f64(min: f64, max: f64) -> f64 {
     random() * (max - min) + min
 }

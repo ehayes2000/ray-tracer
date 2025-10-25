@@ -1,8 +1,7 @@
 use super::Material;
 use super::Scatter;
-use crate::vec3::unit_vector;
-use crate::vec3::{Vec3, dot};
-use crate::{Color, Ray};
+use crate::ray::Ray;
+use crate::vec3::{Color, Vec3, dot, unit_vector};
 use std::rc::Rc;
 
 pub struct Metal {

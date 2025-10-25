@@ -1,13 +1,12 @@
 use std::default::Default;
 use std::io::Write;
-use std::io::stdout;
 
+use super::color::write_color;
 use super::hittable::Hit;
 use super::interval::Interval;
 use super::math::random;
 use super::ray::Ray;
 use super::vec3::{Color, Point, Vec3};
-use super::write_color;
 use crate::math::degrees_to_radians;
 use crate::v3;
 use crate::vec3::{cross, unit_vector};
@@ -120,7 +119,8 @@ impl Camera {
             f,
             "P3\n{} {}\n255\n",
             self.r_params.image_width, self.image_height
-        );
+        )
+        .expect("write failed");
         for j in 0..self.image_height as i64 {
             eprint!("\r       ");
             eprint!("\r{}%", ((j as f64 / self.image_height) * 100.0).ceil());
