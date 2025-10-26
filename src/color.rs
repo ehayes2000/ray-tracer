@@ -1,7 +1,7 @@
 use crate::vec3::Color;
 use std::io::Write;
 
-use super::interval::Interval;
+use crate::interval::Interval;
 
 static INTENSITY: Interval = Interval {
     min: 0.0,

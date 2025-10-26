@@ -1,14 +1,14 @@
 use std::default::Default;
 use std::io::Write;
 
-use super::color::write_color;
-use super::hittable::Hit;
-use super::interval::Interval;
-use super::math::random;
-use super::ray::Ray;
-use super::vec3::{Color, Point, Vec3};
+use crate::color::write_color;
+use crate::hittable::Hit;
+use crate::interval::Interval;
 use crate::math::degrees_to_radians;
+use crate::math::random;
+use crate::ray::Ray;
 use crate::v3;
+use crate::vec3::{Color, Point, Vec3};
 use crate::vec3::{cross, unit_vector};
 
 #[derive(Debug, Clone)]

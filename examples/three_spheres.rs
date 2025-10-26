@@ -32,7 +32,10 @@ fn main() {
         ..Default::default()
     };
     let cam = Camera::new(cparams, rparams);
-    let mut f = Vec::<u8>::with_capacity(1024 * 1024);
-    cam.render(&mut f, &world);
-    std::fs::write("three_sphere.ppm", f).expect("write file");
+    let mut output_file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open("three_spheres.ppm")
+        .expect("three_spheres.ppm");
+    cam.render(&mut output_file, &world);
 }

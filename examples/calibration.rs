@@ -26,7 +26,10 @@ fn main() {
     };
 
     let cam = Camera::new(cparams, rparams);
-    let mut f = Vec::<u8>::with_capacity(1024 * 1024);
-    cam.render(&mut f, &world);
-    std::fs::write("calibration.ppm", f).expect("write to file");
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open("calibration.ppm")
+        .expect("open calibration.ppm");
+    cam.render(&mut file, &world);
 }

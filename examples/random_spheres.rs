@@ -60,8 +60,10 @@ fn main() {
         focal_length: 1.0,
     };
     let camera = Camera::new(camera_params, render_params);
-    let output_file = "random_spheres.ppm";
-    let mut buffer: Vec<u8> = Vec::with_capacity(1024 * 1024);
-    camera.render(&mut buffer, &world);
-    std::fs::write(output_file, buffer).expect("write to file");
+    let mut output_file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open("random_spheres.ppm")
+        .expect("random_spheres.ppm");
+    camera.render(&mut output_file, &world);
 }

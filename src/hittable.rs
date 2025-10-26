@@ -1,7 +1,7 @@
-use super::interval::Interval;
-use super::material::Material;
-use super::ray::Ray;
-use super::vec3::{Point, Vec3, dot};
+use crate::interval::Interval;
+use crate::material::Material;
+use crate::ray::Ray;
+use crate::vec3::{Point, Vec3, dot};
 use std::rc::Rc;
 
 pub trait Hit {
