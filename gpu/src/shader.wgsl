@@ -4,8 +4,8 @@ struct Sphere {
     location: vec2<f32>,
 }
 
-const WIDTH: u32 = 8;
-const HEIGHT: u32 = 8;
+const WIDTH: u32 = 512;
+const HEIGHT: u32 = 512;
 
 @group(0) @binding(0) var<storage, read_write> output: array<u32>;
 // bindings seem to be compiled away if you don't use the data
@@ -14,11 +14,14 @@ const HEIGHT: u32 = 8;
 
 @compute
 // https://www.w3.org/TR/WGSL/#workgroup-size-attr
-@workgroup_size(8,8)
+@workgroup_size(16,16)
 fn main(
 // https://www.w3.org/TR/WGSL/#builtin-inputs-outputs
     @builtin(global_invocation_id) id: vec3<u32>
 ) {
+    if (id.x >= WIDTH || id.y >= HEIGHT){
+        return;
+    }
     let sphere: Sphere = scene[0];
     let idx = id.y * HEIGHT + id.x;
     let red = u32(255.0 * f32(idx) / f32(WIDTH * HEIGHT));

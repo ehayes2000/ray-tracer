@@ -10,6 +10,9 @@ use encase::{ShaderType, StorageBuffer};
 use std::io::Write;
 use wgpu::util::DeviceExt;
 
+const WIDTH: u64 = 512;
+const HEIGHT: u64 = 512;
+
 // why does ShaderType not solve layout?
 // Do I need an attribute?
 #[derive(Clone, Debug, ShaderType)]
@@ -49,15 +52,15 @@ async fn main() {
         .expect("device");
 
     // buffer size in bytes. gpus like u32's -> elems * 4
-    let img_buffer_size = 64 * 4;
+    let img_buffer_size = WIDTH * HEIGHT * 4;
 
     // create buffers
     let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
     scene_buf
         .write(&Sphere {
-            location: [2., 2.],
+            location: [256., 256.],
             _pad: 0.,
-            radius: 2.,
+            radius: 128.,
         })
         .expect("write to scene buffer");
 
@@ -167,7 +170,7 @@ async fn main() {
     pass.set_bind_group(0, &bind_group, &[]);
     // important!. x * y * z _workgroups_ will be dispatched
     // the shader defines @workgroup_size(wx,wy,wz) so the shader will run on wx * wy * wz threads
-    pass.dispatch_workgroups(1, 1, 1);
+    pass.dispatch_workgroups(32, 32, 1);
     // this is how we tell the encoder that the compute pass is over
     // this api is turbo balls. there's probably a reason why it's such balls but idk
     drop(pass);
@@ -205,16 +208,16 @@ async fn main() {
     //     }
     //     println!();
     // }
-    to_ppm(8, 8, data).expect("write ppm");
+    to_ppm(data).expect("write ppm");
 }
 
-fn to_ppm(width: u64, height: u64, buf: &[u32]) -> Result<(), std::io::Error> {
+fn to_ppm(buf: &[u32]) -> Result<(), std::io::Error> {
     let mut f = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
         .open("out.ppm")?;
     writeln!(f, "P3")?;
-    writeln!(f, "{} {}", width, height)?;
+    writeln!(f, "{} {}", WIDTH, HEIGHT)?;
     writeln!(f, "255")?;
     println!("len arr {}", buf.len());
     for i in buf {
