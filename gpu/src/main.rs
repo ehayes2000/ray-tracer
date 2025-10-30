@@ -6,38 +6,41 @@
 // WGSL doesn't use Rust or C layout. This package provides a trait to align
 // structs for WGSL and some types to create, read, and write buffers
 
+use encase::vector::impl_vector;
+use encase::{ShaderType, StorageBuffer};
 use std::io::Write;
 use wgpu::util::DeviceExt;
 
 const WIDTH: u64 = 512;
 const HEIGHT: u64 = 512;
 
-// why does ShaderType not solve layout?
-// Do I need an attribute?
-#[derive(Clone, Debug)]
-pub struct Sphere {
-    pub radius: f32,
-    pub location: [f32; 3],
+#[derive(Debug, Clone)]
+struct V3([f32; 3]);
+
+impl From<[f32; 3]> for V3 {
+    fn from(value: [f32; 3]) -> Self {
+        V3(value)
+    }
 }
 
-impl Sphere {
-    pub fn into_buf(&self) -> [u8; 32] {
-        let parts = [
-            self.radius,
-            0.0,
-            0.0,
-            0.0,
-            self.location[0],
-            self.location[1],
-            self.location[2],
-            0.0,
-        ];
-        unsafe { std::mem::transmute(parts) }
+impl AsRef<[f32; 3]> for V3 {
+    fn as_ref(&self) -> &[f32; 3] {
+        &self.0
     }
+}
 
-    pub fn min_size() -> std::num::NonZero<u64> {
-        std::num::NonZero::new(32_u64).expect("non-zero")
+impl AsMut<[f32; 3]> for V3 {
+    fn as_mut(&mut self) -> &mut [f32; 3] {
+        &mut self.0
     }
+}
+
+impl_vector!(3, V3, f32; using AsRef AsMut From);
+
+#[derive(Clone, Debug, ShaderType)]
+struct Sphere {
+    pub radius: f32,
+    pub location: V3,
 }
 
 #[pollster::main]
@@ -73,52 +76,28 @@ async fn main() {
     let img_buffer_size = WIDTH * HEIGHT * 4;
 
     // create buffers
-    let mut scene_buf = Vec::<u8>::new();
-    scene_buf.extend_from_slice(
-        &Sphere {
-            location: [0., 0., 0.],
-            radius: 1.5,
-        }
-        .into_buf(),
-    );
+    let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
+    scene_buf
+        .write(&[
+            Sphere {
+                location: V3([0., 0., 0.]),
+                radius: 1.5,
+            },
+            Sphere {
+                radius: 0.4,
+                location: V3([2., 0., 2.0]),
+            },
+        ])
+        .expect("scene buffer");
 
-    scene_buf.extend_from_slice(
-        &Sphere {
-            location: [2., 0., 2.0],
-            radius: 0.4,
-        }
-        .into_buf(),
-    );
-    // let c: &[u8] = &Sphere {
-    //     location: [256.0, 256.0, 0.0],
-    //     radius: 30.0,
-    // }
-    // .into_buf();
-    // scene_buf.append();
-    //     Sphere {
-    //         location: [256.0, 256.0, 0.0],
-    //         radius: 30.0,
-    //     },
-    //     Sphere {
-    //         location: [1000.0, 100., 0.0],
-    //         radius: 50.,
-    //     },
-    //     Sphere {
-    //         location: [511., 511., 0.0],
-    //         radius: 75.,
-    //     },
-    // ])
-    // .expect("write to scene buffer");
-
-    let scene_buf_size = scene_buf.len() as u64;
-    println!("scene_buf_size {}", scene_buf_size);
     println!("minimum_sphere_size {}", Sphere::min_size());
 
     let gpu_scene_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("scene_buffer"),
-        contents: &scene_buf,
+        contents: &scene_buf.into_inner(),
         usage: wgpu::BufferUsages::STORAGE,
     });
+
     println!("gpu_scene_buffer_size {}", gpu_scene_buffer.size());
     // img output buffer
     let img_buffer = device.create_buffer(&wgpu::BufferDescriptor {
