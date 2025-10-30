@@ -16,7 +16,7 @@ pub struct CameraParameters {
     pub look_at: Point,
     pub look_from: Point,
     pub vfov: f64,
-    pub focal_length: f64,
+    // pub focal_length: f64,
     pub focus_distance: f64,
     pub defocus_angle: f64,
 }
@@ -28,7 +28,7 @@ impl Default for CameraParameters {
             look_from: v3!(1, 1, 0),
             vfov: 90.,
             defocus_angle: 0.0,
-            focal_length: 1.0,
+            // focal_length: 1.0,
             focus_distance: 1.0,
         }
     }
@@ -83,7 +83,9 @@ impl Camera {
 
         let viewport_u = viewport_width * u;
         let viewport_v = viewport_height * -v;
+        // world coordinates per pixel (width)
         let pixel_delta_u = viewport_u / r_params.image_width;
+        // world coordinates per pixel (height)
         let pixel_delta_v = viewport_v / image_height;
 
         let viewport_upper_left = c_params.look_from

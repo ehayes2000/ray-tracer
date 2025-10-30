@@ -3,10 +3,9 @@
 // wgsl: https://www.w3.org/TR/WGSL
 // tour of wgsl: https://google.github.io/tour-of-wgsl
 // learn wgpu: https://sotrh.github.io/learn-wgpu
-
 // WGSL doesn't use Rust or C layout. This package provides a trait to align
 // structs for WGSL and some types to create, read, and write buffers
-use encase::{ShaderType, StorageBuffer};
+
 use std::io::Write;
 use wgpu::util::DeviceExt;
 
@@ -15,11 +14,30 @@ const HEIGHT: u64 = 512;
 
 // why does ShaderType not solve layout?
 // Do I need an attribute?
-#[derive(Clone, Debug, ShaderType)]
+#[derive(Clone, Debug)]
 pub struct Sphere {
     pub radius: f32,
-    pub _pad: f32,
-    pub location: [f32; 2],
+    pub location: [f32; 3],
+}
+
+impl Sphere {
+    pub fn into_buf(&self) -> [u8; 32] {
+        let parts = [
+            self.radius,
+            0.0,
+            0.0,
+            0.0,
+            self.location[0],
+            self.location[1],
+            self.location[2],
+            0.0,
+        ];
+        unsafe { std::mem::transmute(parts) }
+    }
+
+    pub fn min_size() -> std::num::NonZero<u64> {
+        std::num::NonZero::new(32_u64).expect("non-zero")
+    }
 }
 
 #[pollster::main]
@@ -55,16 +73,43 @@ async fn main() {
     let img_buffer_size = WIDTH * HEIGHT * 4;
 
     // create buffers
-    let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
-    scene_buf
-        .write(&Sphere {
-            location: [256., 256.],
-            _pad: 0.,
-            radius: 128.,
-        })
-        .expect("write to scene buffer");
+    let mut scene_buf = Vec::<u8>::new();
+    scene_buf.extend_from_slice(
+        &Sphere {
+            location: [0., 0., 0.],
+            radius: 1.5,
+        }
+        .into_buf(),
+    );
 
-    let scene_buf = scene_buf.into_inner();
+    scene_buf.extend_from_slice(
+        &Sphere {
+            location: [2., 0., 2.0],
+            radius: 0.4,
+        }
+        .into_buf(),
+    );
+    // let c: &[u8] = &Sphere {
+    //     location: [256.0, 256.0, 0.0],
+    //     radius: 30.0,
+    // }
+    // .into_buf();
+    // scene_buf.append();
+    //     Sphere {
+    //         location: [256.0, 256.0, 0.0],
+    //         radius: 30.0,
+    //     },
+    //     Sphere {
+    //         location: [1000.0, 100., 0.0],
+    //         radius: 50.,
+    //     },
+    //     Sphere {
+    //         location: [511., 511., 0.0],
+    //         radius: 75.,
+    //     },
+    // ])
+    // .expect("write to scene buffer");
+
     let scene_buf_size = scene_buf.len() as u64;
     println!("scene_buf_size {}", scene_buf_size);
     println!("minimum_sphere_size {}", Sphere::min_size());
@@ -113,6 +158,7 @@ async fn main() {
                 count: None,
                 ty: wgpu::BindingType::Buffer {
                     has_dynamic_offset: false,
+                    // min_binding_size: Some(Sphere::min_size()),
                     min_binding_size: Some(Sphere::min_size()),
                     ty: wgpu::BufferBindingType::Storage { read_only: true },
                 },
