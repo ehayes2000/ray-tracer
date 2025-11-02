@@ -72,6 +72,28 @@ struct Sphere {
     material: Material,
 }
 
+// ___ random ___
+// https://www.shadertoy.com/view/4djSRW
+fn hash12(p: vec2<f32>) -> f32 {
+	var p3  = fract(vec3f(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+fn hash13(p: vec3<f32>) -> f32
+{
+	var p3 = fract(p * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+fn hash33(p: vec3<f32>) -> vec3<f32>
+{
+	var p3 = fract(p * vec3f(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yxz+33.33);
+    return fract((p3.xxy + p3.yxx)*p3.zyx);
+}
+
 // ____ scatter ____
 fn scatter_zero() -> Scatter {
     return Scatter(false, ray_zero(), vec_zero());
@@ -148,13 +170,17 @@ fn material_scatter_lambertian(
     ray: Ray,
     hit: HitRecord
 ) -> Scatter {
-    // TODO random gen
     var scatter = scatter_zero();
+    var direction = hit.normal + hash33(hit.point);
+    if (vec_near_zero(direction)) {
+        direction = hit.normal;
+    }
+
     scatter.scatter = true;
-    // wrong? // why ray at normal? should be ai = ao
+
     scatter.ray = Ray(
         hit.point,
-        hit.normal
+        direction
     );
     scatter.color = obj.color;
     return scatter;
@@ -192,6 +218,11 @@ fn vec_zero() -> vec3f {
 
 fn vec_one() -> vec3f {
     return vec3f(1.0,1.0,1.0);
+}
+
+const E = 1e-8;
+fn vec_near_zero(v: vec3<f32>) -> bool {
+    return abs(v.x) < E && abs(v.y) < E && abs(v.z) < E;
 }
 
 // ____ sphere ____
