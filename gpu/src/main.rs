@@ -3,6 +3,7 @@
 // wgsl: https://www.w3.org/TR/WGSL
 // tour of wgsl: https://google.github.io/tour-of-wgsl
 // learn wgpu: https://sotrh.github.io/learn-wgpu
+// wgsl fundementals: https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl-function-reference.html
 // WGSL doesn't use Rust or C layout. This package provides a trait to align
 // structs for WGSL and some types to create, read, and write buffers
 
@@ -16,6 +17,12 @@ const HEIGHT: u64 = 512;
 
 #[derive(Debug, Clone)]
 struct V3([f32; 3]);
+
+macro_rules! v3 {
+    ($a:expr, $b:expr , $c:expr) => {
+        V3([$a as f32, $b as f32, $c as f32])
+    };
+}
 
 impl From<[f32; 3]> for V3 {
     fn from(value: [f32; 3]) -> Self {
@@ -41,6 +48,15 @@ impl_vector!(3, V3, f32; using AsRef AsMut From);
 struct Sphere {
     pub radius: f32,
     pub location: V3,
+    pub material: Material,
+}
+
+#[derive(Clone, Debug, ShaderType)]
+struct Material {
+    // Lambertian(0) | Dielectric(1) | Metal(2)
+    kind: u32,
+    roughness_refractiveness: f32,
+    color: V3,
 }
 
 #[pollster::main]
@@ -74,18 +90,36 @@ async fn main() {
 
     // buffer size in bytes. gpus like u32's -> elems * 4
     let img_buffer_size = WIDTH * HEIGHT * 4;
+    let color = Material {
+        kind: 0,
+        color: v3!(0.0, 0.4, 0.7),
+        roughness_refractiveness: 0.,
+    };
+
+    let ground = Material {
+        kind: 0,
+        color: v3!(0.3, 0.3, 0.0),
+        roughness_refractiveness: 0.,
+    };
 
     // create buffers
     let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
     scene_buf
         .write(&[
             Sphere {
-                location: V3([0., 0., 0.]),
                 radius: 1.5,
+                location: V3([0., 1.5, 0.]),
+                material: color.clone(),
             },
             Sphere {
                 radius: 0.4,
                 location: V3([2., 0., 2.0]),
+                material: color.clone(),
+            },
+            Sphere {
+                radius: 100.0,
+                location: v3!(0, -100, 0),
+                material: ground,
             },
         ])
         .expect("scene buffer");
@@ -246,7 +280,10 @@ fn to_ppm(buf: &[u32]) -> Result<(), std::io::Error> {
     writeln!(f, "255")?;
     println!("len arr {}", buf.len());
     for i in buf {
-        writeln!(f, "{} 0 0", i)?;
+        let r = i >> 16;
+        let g = i << 16 >> 24;
+        let b = i << 24 >> 24;
+        writeln!(f, "{} {} {}", r, g, b)?;
     }
     Ok(())
 }
