@@ -1,11 +1,10 @@
-
 const N_OBJECTS = 3;
 const IMG_W = 512;
 const IMG_H = 512;
 const MAX_BOUNCES = 50;
 const VFOV = 90.0;
 const FOCAL_LEN = 1.0;
-const LOOK_FROM = vec3f(10.0, 5.0, 0.0);
+const LOOK_FROM = vec3f(10.0,5.0,0.0);
 const LOOK_AT = vec3f(0.0, 0.0, 0.0);
 const VUP = vec3f(0.0, 1.0, 0.0);
 const _W = LOOK_FROM - LOOK_AT;
@@ -41,9 +40,11 @@ struct Ray {
 struct Material {
     // Lambertian(0) | Dielectric(1) | Metal(2)
     kind: u32,
-    // roughness or refractive_index
-    roughness_refractive: f32,
     color: vec3<f32>,
+    // metal only
+    roughness: f32,
+    // glass only
+    refraction_index: f32,
 }
 
 struct Scatter {
@@ -80,21 +81,22 @@ fn scatter_zero() -> Scatter {
 
 fn material_scatter(
     obj: Material,
+    ray: Ray,
     hit: HitRecord
 ) -> Scatter {
 
-
     if (obj.kind == 0 ){
-        return material_scatter_lambertian(obj, hit );
+        return material_scatter_lambertian(obj, ray, hit);
     } else if (obj.kind == 1) {
-        return material_scatter_dielectric(obj, hit);
+        return material_scatter_dielectric(obj, ray, hit);
     } else {
-        return material_scatter_metal(obj, hit);
+        return material_scatter_metal(obj, ray, hit);
     }
 }
 
 fn material_scatter_metal(
     obj: Material,
+    ray: Ray,
     hit: HitRecord
 ) -> Scatter {
     var scatter = scatter_zero();
@@ -105,17 +107,45 @@ fn material_scatter_metal(
 
 fn material_scatter_dielectric(
     obj: Material,
+    ray: Ray,
     hit: HitRecord
 ) -> Scatter {
     var scatter = scatter_zero();
-    scatter.color = vec3f(0.0, 0.0, 1.0);
+    let attenuation = vec_one();
+    let unit_direction = normalize(ray.direction);
+    var ri: f32;
+    if (hit.front_face) {
+        ri = 1.0 / obj.refraction_index;
+    } else {
+        ri = obj.refraction_index;
+    }
+    let cos_theta = min(dot(unit_direction, hit.normal), 1.0);
+    let sin_theta = sqrt(1.0 - pow(cos_theta, 2.0));
+    var direction: vec3<f32>;
+    // TODO random
+    if (ri * sin_theta > 1.0 || material_dielectric_reflectance(obj, cos_theta) > 0.5) {
+        direction = reflect(unit_direction, hit.normal);
+    } else {
+        direction = refract(unit_direction, hit.normal, ri);
+    }
     scatter.scatter = true;
+    scatter.ray = Ray(direction, hit.point);
+    scatter.color = attenuation;
     return scatter;
+}
+
+fn material_dielectric_reflectance(
+    obj: Material,
+    theta: f32
+) -> f32 {
+    let r0 = pow(((1.0 - obj.refraction_index) / (1.0 + obj.refraction_index)), 2.0);
+    return r0 + (1.0 - r0) * pow(1.0 - theta, 5.0);
 }
 
 
 fn material_scatter_lambertian(
     obj: Material,
+    ray: Ray,
     hit: HitRecord
 ) -> Scatter {
     // TODO random gen
@@ -160,18 +190,8 @@ fn vec_zero() -> vec3f {
     return vec3f(0.0,0.0,0.0);
 }
 
-// remove
-fn hit_sphere(s: Sphere, r: Ray) -> bool {
-    let oc = s.center - r.origin;
-    let a = pow(length(r.direction), 2.0);
-    let h = dot(r.direction, oc);
-    let c = pow(length(oc), 2.0) - pow(s.radius, 2.0);
-    let descriminant = h * h - a * c;
-    if (descriminant <= 0.) {
-        return false;
-    } else {
-        return true;
-    }
+fn vec_one() -> vec3f {
+    return vec3f(1.0,1.0,1.0);
 }
 
 // ____ sphere ____
@@ -228,12 +248,11 @@ fn sphere_hit(
 fn sky_color(ray: Ray) -> vec3<f32> {
     let unit_dir = normalize(ray.direction);
     let a = 0.5 * (unit_dir.x + 1.0);
-    return (1.0 - a) * vec3f(1., 1., 1.) + vec3f(0.5, 0.7, 1.0);
+    return (1.0 - a) * vec3f(1., 1., 1.) + a * vec3f(0.5, 0.7, 1.0);
 }
 
 
 fn compute_color(r: Ray) -> vec3<f32> {
-
     var interval = Interval(0.001, MAX);
     var is_hit = false;
     var bounces = 0;
@@ -246,7 +265,7 @@ fn compute_color(r: Ray) -> vec3<f32> {
             let hit = sphere_hit(scene[i], ray, interval);
             if (hit.hit) {
                 is_hit = true;
-                let scatter = material_scatter(scene[i].material, hit);
+                let scatter = material_scatter(scene[i].material, ray, hit);
                 ray = scatter.ray;
                 if (scatter.scatter) {
                     color = color * scatter.color;
@@ -281,22 +300,4 @@ fn main(
     let color = compute_color(ray);
     let packed_color = u32(color.x * 255.0) << 16 | u32(color.y * 255.0)  << 8 | u32(color.z * 255.0);
     output[idx] = packed_color;
-    //
-    //
-    // working single cast
-    // let idx = id.y * IMG_H + id.x;
-    // var ball = false;
-    // let ray = ray_cast(vec2f(f32(id.x), f32(id.y)));
-    // for (var i = 0; i < N_OBJECTS; i ++){
-    //     let sphere = scene[i];
-    //     if (hit_sphere(sphere, ray)) {
-    //         ball = true;
-    //     }
-    // }
-    // if (ball) {
-    //     output[idx] = 0;
-    // } else {
-    //     let red = u32(255.0 * f32(idx) / f32(IMG_W * IMG_H));
-    //     output[idx] = red;
-    // }
 }

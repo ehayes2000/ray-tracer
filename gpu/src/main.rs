@@ -53,10 +53,11 @@ struct Sphere {
 
 #[derive(Clone, Debug, ShaderType)]
 struct Material {
-    // Lambertian(0) | Dielectric(1) | Metal(2)
-    kind: u32,
-    roughness_refractiveness: f32,
-    color: V3,
+    /// Lambertian(0) | Dielectric(1) | Metal(2)
+    pub kind: u32,
+    pub color: V3,
+    pub roughness: f32,
+    pub refractive_index: f32,
 }
 
 #[pollster::main]
@@ -93,13 +94,22 @@ async fn main() {
     let color = Material {
         kind: 0,
         color: v3!(0.0, 0.4, 0.7),
-        roughness_refractiveness: 0.,
+        refractive_index: 0.,
+        roughness: 0.,
     };
 
     let ground = Material {
         kind: 0,
-        color: v3!(0.3, 0.3, 0.0),
-        roughness_refractiveness: 0.,
+        color: v3!(0.3, 0.3, 0.3),
+        refractive_index: 0.,
+        roughness: 0.,
+    };
+
+    let glass = Material {
+        kind: 1,
+        color: v3!(1.0, 1.0, 1.0),
+        refractive_index: 1.5,
+        roughness: 0.0,
     };
 
     // create buffers
@@ -113,13 +123,18 @@ async fn main() {
             },
             Sphere {
                 radius: 0.4,
-                location: V3([2., 0., 2.0]),
+                location: V3([0., 0., 2.]),
                 material: color.clone(),
             },
             Sphere {
                 radius: 100.0,
                 location: v3!(0, -100, 0),
                 material: ground,
+            },
+            Sphere {
+                radius: 1.0,
+                location: v3!(0., 1.0, -3.0),
+                material: glass,
             },
         ])
         .expect("scene buffer");
