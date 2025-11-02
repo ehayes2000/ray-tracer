@@ -1,10 +1,10 @@
-const N_OBJECTS = 3;
+const N_OBJECTS = 4;
 const IMG_W = 512;
 const IMG_H = 512;
 const MAX_BOUNCES = 50;
 const VFOV = 90.0;
 const FOCAL_LEN = 1.0;
-const LOOK_FROM = vec3f(10.0,5.0,0.0);
+const LOOK_FROM = vec3f(5.0,3.0,0.0);
 const LOOK_AT = vec3f(0.0, 0.0, 0.0);
 const VUP = vec3f(0.0, 1.0, 0.0);
 const _W = LOOK_FROM - LOOK_AT;
@@ -121,10 +121,17 @@ fn material_scatter_metal(
     ray: Ray,
     hit: HitRecord
 ) -> Scatter {
-    var scatter = scatter_zero();
-    scatter.color = vec3f(0.0, 1.0, 0.0);
-    scatter.scatter = true;
-    return scatter;
+    var direction = reflect(ray.direction, hit.normal);
+    direction = normalize(direction) + (obj.roughness * hash33(hit.point));
+    if (dot(direction, hit.normal) > 0.0) {
+        var scatter = scatter_zero();
+        scatter.scatter = true;
+        scatter.color = obj.color;
+        scatter.ray = Ray(hit.point, direction);
+        return scatter;
+    } else {
+        return scatter_zero();
+    }
 }
 
 fn material_scatter_dielectric(
@@ -141,17 +148,17 @@ fn material_scatter_dielectric(
     } else {
         ri = obj.refraction_index;
     }
-    let cos_theta = min(dot(unit_direction, hit.normal), 1.0);
+    let cos_theta = min(dot(-unit_direction, hit.normal), 1.0);
     let sin_theta = sqrt(1.0 - pow(cos_theta, 2.0));
     var direction: vec3<f32>;
     // TODO random
-    if (ri * sin_theta > 1.0 || material_dielectric_reflectance(obj, cos_theta) > 0.5) {
+    // if (ri * sin_theta > 1.0 || material_dielectric_reflectance(obj, cos_theta) > 0.5) {
         direction = reflect(unit_direction, hit.normal);
-    } else {
-        direction = refract(unit_direction, hit.normal, ri);
-    }
+    // } else {
+        // direction = refract(unit_direction, hit.normal, ri);
+    // }
     scatter.scatter = true;
-    scatter.ray = Ray(direction, hit.point);
+    scatter.ray = Ray(hit.point, direction);
     scatter.color = attenuation;
     return scatter;
 }
@@ -255,6 +262,7 @@ fn sphere_hit(
             hit.normal = -normal;
         }
         hit.front_face = front_face;
+        hit.t = root_a;
         return hit;
     }
     let root_b = (h + sqrt(descriminant)) / a;
@@ -271,6 +279,7 @@ fn sphere_hit(
             hit.normal = -normal;
         }
         hit.front_face = front_face;
+        hit.t = root_b;
         return hit;
     }
     return hit_zero();

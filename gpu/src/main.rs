@@ -112,6 +112,13 @@ async fn main() {
         roughness: 0.0,
     };
 
+    let metal = Material {
+        kind: 2,
+        color: v3!(1.0, 1.0, 1.0),
+        refractive_index: 0.0,
+        roughness: 0.2,
+    };
+
     // create buffers
     let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
     scene_buf
@@ -119,16 +126,21 @@ async fn main() {
             Sphere {
                 radius: 1.5,
                 location: V3([0., 1.5, 0.]),
-                material: color.clone(),
+                material: metal.clone(),
             },
             Sphere {
-                radius: 0.4,
-                location: V3([0., 0., 2.]),
-                material: color.clone(),
+                radius: 1.0,
+                location: V3([0., 1.0, 2.5]),
+                material: metal.clone(),
             },
             Sphere {
-                radius: 100.0,
-                location: v3!(0, -100, 0),
+                radius: 1.0,
+                location: v3!(0, 1.0, -2.5),
+                material: metal,
+            },
+            Sphere {
+                radius: 10000.0,
+                location: v3!(0, -10000, 0),
                 material: ground,
             },
             Sphere {
