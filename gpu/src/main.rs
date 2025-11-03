@@ -93,7 +93,7 @@ async fn main() {
     let img_buffer_size = WIDTH * HEIGHT * 4;
     let color = Material {
         kind: 0,
-        color: v3!(0.0, 0.4, 0.7),
+        color: v3!(0.7, 0.2, 0.2),
         refractive_index: 0.,
         roughness: 0.,
     };
@@ -107,13 +107,13 @@ async fn main() {
 
     let glass = Material {
         kind: 1,
-        color: v3!(1.0, 1.0, 1.0),
-        refractive_index: 1.5,
+        color: v3!(1.0, 0.8, 0.8),
+        refractive_index: 2.0,
         roughness: 0.0,
     };
 
     let metal = Material {
-        kind: 2,
+        kind: 1,
         color: v3!(1.0, 1.0, 1.0),
         refractive_index: 0.0,
         roughness: 0.2,
@@ -126,7 +126,7 @@ async fn main() {
             Sphere {
                 radius: 1.5,
                 location: V3([0., 1.5, 0.]),
-                material: metal.clone(),
+                material: color.clone(),
             },
             Sphere {
                 radius: 1.0,
@@ -144,8 +144,8 @@ async fn main() {
                 material: ground,
             },
             Sphere {
-                radius: 1.0,
-                location: v3!(0., 1.0, -3.0),
+                radius: 0.5,
+                location: v3!(1.5, 0.5, -1.0),
                 material: glass,
             },
         ])
