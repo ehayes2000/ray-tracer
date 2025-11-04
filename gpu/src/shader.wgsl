@@ -2,7 +2,7 @@ const N_OBJECTS = 5;
 const IMG_W = 512;
 const IMG_H = 512;
 const MAX_BOUNCES = 50;
-const SAMPLES_PER_PX = 1000;
+const SAMPLES_PER_PX = 10000;
 const VFOV = 90.0;
 const FOCAL_LEN = 1.0;
 const LOOK_FROM = vec3f(5., 2.,0.0);
@@ -30,10 +30,6 @@ const MAX = 3.40282346638528859812e+38f;
 const EPSILON = 1e-8;
 
 
-@group(0) @binding(0) var<storage, read_write> output: array<u32>;
-// bindings seem to be compiled away if you don't use the data
-// this results in bind_group erros when creating the pipeline
-@group(0) @binding(1) var<storage, read> scene: array<Sphere>;
 
 struct Ray {
     origin: vec3<f32>,
@@ -77,56 +73,35 @@ struct Sphere {
 }
 
 // ___ random ___
-// https://www.shadertoy.com/view/4djSRW
-fn rand_hash12(p: f32) -> vec2<f32>
+// shoutout
+// https://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
+// https://en.wikipedia.org/wiki/Xorshift
+var<private> seed: u32;
+
+fn xorshift32() -> u32
 {
-	var p3 = fract(vec3f(p) * vec3f(.1031, .1030, .0973));
-	p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.xx+p3.yz)*p3.zy);
+    var x = seed;
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	seed = x;
+	return seed;
 }
 
-
-fn rand_hash21(p: vec2<f32>) -> f32 {
-	var p3  = fract(vec3f(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+const MAX_U32 = 4294967296.0;
+fn rand() -> f32 {
+    return f32(xorshift32()) / MAX_U32;
 }
 
-fn rand_hash22(p: vec2<f32>) -> vec2<f32>
-{
-	var p3 = fract(vec3f(p.xyx) * vec3f(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xx+p3.yz)*p3.zy);
-}
-
-fn rand_hash31(p: vec3<f32>) -> f32
-{
-	var p3 = fract(p * .1031);
-    p3 += dot(p3, p3.zyx + 31.32);
-    return fract((p3.x + p3.y) * p3.z);
-}
-
-fn rand_hash33(p: vec3<f32>) -> vec3<f32>
-{
-	var p3 = fract(p * vec3f(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yxz+33.33);
-    return fract((p3.xxy + p3.yxx)*p3.zyx);
-}
-
-fn rand_vec_unit(p: vec3<f32>) -> vec3<f32> {
-    var seed = p;
-    for (var i = 0; i < 1000000; i++) {
-        let v = rand_hash33(seed);
+fn rand_vec_unit() -> vec3<f32> {
+    for (var i = 0; i < 10; i++) {
+        let v = vec3f(rand(), rand(), rand());
         let lensq = pow(length(v), 2.0);
         if (EPSILON < lensq && lensq <= 1.0) {
             return v / sqrt(lensq);
-        } else {
-            seed.x += .1;
-            seed.y += .1;
-            seed.z += .1;
         }
     }
-    return p;
+    return vec_zero();
 }
 
 // ____ scatter ____
@@ -157,7 +132,7 @@ fn material_scatter_metal(
     hit: HitRecord
 ) -> Scatter {
     var direction = reflect(ray.direction, hit.normal);
-    direction = normalize(direction) + (obj.roughness * rand_vec_unit(ray.direction));
+    direction = normalize(direction) + (obj.roughness * rand_vec_unit());
     if (dot(direction, hit.normal) > 0.0) {
         var scatter = scatter_zero();
         scatter.scatter = true;
@@ -186,7 +161,7 @@ fn material_scatter_dielectric(
     let cos_theta = min(dot(-unit_direction, hit.normal), 1.0);
     let sin_theta = sqrt(1.0 - pow(cos_theta, 2.0));
     var direction: vec3<f32>;
-    if (ri * sin_theta > 1.0 || material_dielectric_reflectance(obj, cos_theta) > rand_hash31(ray.direction)) {
+    if (ri * sin_theta > 1.0 || material_dielectric_reflectance(obj, cos_theta) > rand()) {
         direction = reflect(unit_direction, hit.normal);
     } else {
         direction = refract(unit_direction, hit.normal, ri);
@@ -212,7 +187,7 @@ fn material_scatter_lambertian(
     hit: HitRecord
 ) -> Scatter {
     var scatter = scatter_zero();
-    var direction = hit.normal + rand_vec_unit(ray.direction);
+    var direction = hit.normal + rand_vec_unit();
     if (vec_near_zero(direction)) {
         direction = hit.normal;
     }
@@ -328,7 +303,7 @@ fn sphere_hit(
 
 fn sky_color(ray: Ray) -> vec3<f32> {
     let unit_dir = normalize(ray.direction);
-    let a = 0.5 * (unit_dir.x + 1.0);
+    let a = 0.5 * (unit_dir.y + 1.0);
     return (1.0 - a) * vec3f(1., 1., 1.) + a * vec3f(0.5, 0.7, 1.0);
 }
 
@@ -376,6 +351,11 @@ fn compute_color(r: Ray) -> vec3<f32> {
 }
 
 
+
+@group(0) @binding(0) var<storage, read_write> output: array<u32>;
+// bindings seem to be compiled away if you don't use the data
+// this results in bind_group erros when creating the pipeline
+@group(0) @binding(1) var<storage, read> scene: array<Sphere>;
 @compute
 // https://www.w3.org/TR/WGSL/#workgroup-size-attr
 @workgroup_size(16,16)
@@ -387,9 +367,10 @@ fn main(
         return;
     }
     let idx = id.y * IMG_H + id.x;
+    seed = idx + 1;
     var color = vec_zero();
     for (var i = 0; i < SAMPLES_PER_PX; i ++) {
-        var offset = rand_hash12(f32(i));
+        var offset = vec2f(rand(), rand());
         offset.x -= 0.5;
         offset.y -= 0.5;
         let ray = ray_cast(vec2f(f32(id.x), f32(id.y)), offset);
