@@ -352,31 +352,34 @@ fn compute_color(r: Ray) -> vec3<f32> {
 
 
 
-@group(0) @binding(0) var<storage, read_write> output: array<u32>;
-// bindings seem to be compiled away if you don't use the data
-// this results in bind_group erros when creating the pipeline
-@group(0) @binding(1) var<storage, read> scene: array<Sphere>;
-@compute
-// https://www.w3.org/TR/WGSL/#workgroup-size-attr
-@workgroup_size(16,16)
-fn main(
-    // https://www.w3.org/TR/WGSL/#builtin-inputs-outputs
-    @builtin(global_invocation_id) id: vec3<u32>
-) {
-    if (id.x >= IMG_W || id.y >= IMG_H){
-        return;
-    }
-    let idx = id.y * IMG_H + id.x;
-    seed = idx + 1;
-    var color = vec_zero();
-    for (var i = 0; i < SAMPLES_PER_PX; i ++) {
-        var offset = vec2f(rand(), rand());
-        offset.x -= 0.5;
-        offset.y -= 0.5;
-        let ray = ray_cast(vec2f(f32(id.x), f32(id.y)), offset);
-        color += compute_color(ray);
-    }
-    color = color * PX_SAMPLES_SCALE;
-    let packed_color = u32(color.x * 255.0) << 16 | u32(color.y * 255.0)  << 8 | u32(color.z * 255.0);
-    output[idx] = packed_color;
-}
+// @group(0) @binding(0) var<storage, read_write> output: array<u32>;
+// // bindings seem to be compiled away if you don't use the data
+// // this results in bind_group erros when creating the pipeline
+// @group(0) @binding(1) var<storage, read> scene: array<Sphere>;
+// @compute
+// // https://www.w3.org/TR/WGSL/#workgroup-size-attr
+// @workgroup_size(16,16)
+// fn main(
+//     // https://www.w3.org/TR/WGSL/#builtin-inputs-outputs
+//     @builtin(global_invocation_id) id: vec3<u32>
+// ) {
+//     if (id.x >= IMG_W || id.y >= IMG_H){
+//         return;
+//     }
+//     let idx = id.y * IMG_H + id.x;
+//     seed = idx + 1;
+//     var color = vec_zero();
+//     for (var i = 0; i < SAMPLES_PER_PX; i ++) {
+//         var offset = vec2f(rand(), rand());
+//         offset.x -= 0.5;
+//         offset.y -= 0.5;
+//         let ray = ray_cast(vec2f(f32(id.x), f32(id.y)), offset);
+//         color += compute_color(ray);
+//     }
+//     color = color * PX_SAMPLES_SCALE;
+//     let packed_color = u32(color.x * 255.0) << 16 | u32(color.y * 255.0)  << 8 | u32(color.z * 255.0);
+//     output[idx] = packed_color;
+// }
+//
+// @vertex
+// fn vs_main() -> @builtin(position)
