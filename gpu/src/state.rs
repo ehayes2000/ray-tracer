@@ -372,6 +372,18 @@ impl State {
     pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
+            (KeyCode::KeyA | KeyCode::ArrowLeft, true) => {
+                self.params.look_from.0[2] -= 0.1;
+            }
+            (KeyCode::KeyD | KeyCode::ArrowRight, true) => {
+                self.params.look_from.0[2] += 0.1;
+            }
+            (KeyCode::KeyW | KeyCode::ArrowUp, true) => {
+                self.params.look_from.0[0] -= 0.1;
+            }
+            (KeyCode::KeyS | KeyCode::ArrowDown, true) => {
+                self.params.look_from.0[0] += 0.1;
+            }
             _ => {}
         }
     }
