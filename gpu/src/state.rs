@@ -2,9 +2,10 @@ use encase::{ShaderType, StorageBuffer};
 use std::{iter, sync::Arc};
 use wgpu::util::DeviceExt;
 use wgpu::{FragmentState, VertexState};
+use winit::event;
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
-use crate::types::{Material, RenderParameters, SceneBufferEntry, Sphere, V3};
+use crate::types::{Material, RenderParameters, SceneBufferEntry, Sphere, V3, cross};
 use crate::v3;
 
 pub struct State {
@@ -19,6 +20,7 @@ pub struct State {
     pub bind_group: wgpu::BindGroup,
     pub param_uniform: wgpu::Buffer,
     pub params: RenderParameters,
+    pub move_dir: Option<Direction>,
 }
 
 fn scene() -> Vec<SceneBufferEntry> {
@@ -296,6 +298,7 @@ impl State {
             bind_group,
             param_uniform,
             params: RenderParameters::default(),
+            move_dir: None,
         })
     }
 
@@ -312,6 +315,7 @@ impl State {
 
     pub fn update(&mut self) {
         self.fps.update();
+        self.move_dir.map(|dir| move_camera(&mut self.params, dir));
         let mut data = StorageBuffer::new(Vec::new());
         data.write(&self.params).expect("good ok yes");
         self.queue
@@ -370,21 +374,58 @@ impl State {
     }
 
     pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-        match (code, is_pressed) {
-            (KeyCode::Escape, true) => event_loop.exit(),
-            (KeyCode::KeyA | KeyCode::ArrowLeft, true) => {
-                self.params.look_from.0[2] -= 0.1;
-            }
-            (KeyCode::KeyD | KeyCode::ArrowRight, true) => {
-                self.params.look_from.0[2] += 0.1;
-            }
-            (KeyCode::KeyW | KeyCode::ArrowUp, true) => {
-                self.params.look_from.0[0] -= 0.1;
-            }
-            (KeyCode::KeyS | KeyCode::ArrowDown, true) => {
-                self.params.look_from.0[0] += 0.1;
-            }
+        match (is_pressed, Direction::try_from(code).ok()) {
+            (true, Some(dir)) => self.move_dir = Some(dir),
+            (false, Some(_)) => self.move_dir = None,
             _ => {}
         }
+        if code == KeyCode::Escape {
+            event_loop.exit();
+        }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+    Forward,
+    Backward,
+}
+
+impl TryFrom<KeyCode> for Direction {
+    type Error = ();
+    fn try_from(code: KeyCode) -> Result<Self, Self::Error> {
+        match code {
+            KeyCode::KeyA | KeyCode::ArrowLeft => Ok(Self::Left),
+            KeyCode::KeyD | KeyCode::ArrowRight => Ok(Self::Right),
+            KeyCode::KeyW | KeyCode::ArrowUp => Ok(Self::Forward),
+            KeyCode::KeyS | KeyCode::ArrowDown => Ok(Self::Backward),
+            KeyCode::Space => Ok(Self::Up),
+            KeyCode::KeyC | KeyCode::ControlLeft => Ok(Self::Down),
+            _ => Err(()),
+        }
+    }
+}
+
+// this obviously needs to be normalized for time but idc atm
+fn move_camera(params: &mut RenderParameters, direction: Direction) {
+    let epsilon = 0.5;
+    let look_vector = params.look_from - params.look_at;
+    let fb = v3!(look_vector.0[0], 0, look_vector.0[2]).normalize();
+    // left right is orthogonal to where looking and parallel to ground
+    let lr = cross(v3!(0, 1, 0), fb);
+    // forward backwards  is orthogonal to left right and and parallel to ground
+    let translate = match direction {
+        Direction::Backward => fb * epsilon,
+        Direction::Forward => fb * epsilon * -1.0,
+        Direction::Up => v3!(0, 1, 0) * epsilon,
+        Direction::Down => v3!(0, -1, 0) * epsilon,
+        Direction::Left => lr * epsilon * -1.0,
+        Direction::Right => lr * epsilon,
+    };
+    params.look_from = params.look_from + translate;
+    params.look_at = params.look_at + translate;
 }
