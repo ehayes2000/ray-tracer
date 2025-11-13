@@ -7,8 +7,8 @@ pub use lambertian::Lambertian;
 pub use metal::Metal;
 
 use crate::hittable::HitRecord;
-use crate::ray::Ray;
-use crate::vec3::Color;
+use crate::math::Color;
+use crate::math::Ray;
 
 pub struct Scatter {
     pub color_attenuation: Color,

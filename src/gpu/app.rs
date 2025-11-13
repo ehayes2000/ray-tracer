@@ -7,8 +7,9 @@ use winit::{
     window::Window,
 };
 
-use crate::state::State;
+use super::state::State;
 
+#[derive(Default)]
 pub struct App {
     state: Option<State>,
 }

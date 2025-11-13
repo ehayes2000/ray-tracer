@@ -3,10 +3,10 @@ use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
     material::{Dielectric, Lambertian, Metal},
-    math::{random, random_f64},
+    math::Vec3,
+    math::{random, random_f32},
     sphere::Sphere,
     v3,
-    vec3::Vec3,
 };
 
 fn main() {
@@ -14,9 +14,9 @@ fn main() {
     let ground_m = Lambertian::obj(v3!(0.5, 0.5, 0.5));
     world.add(ball!(v3!(0, -1000, 0), 1000., ground_m));
     for a in -11..11 {
-        let a = a as f64;
+        let a = a as f32;
         for b in -11..11 {
-            let b = b as f64;
+            let b = b as f32;
             let mat = random();
             let center = v3!(a + 0.9 * random(), 0.2, b + 0.9 * random());
             if (center - v3!(4, 0.2, 0)).len() > 0.9 {
@@ -25,7 +25,7 @@ fn main() {
                     Lambertian::obj(color)
                 } else if mat < 0.95 {
                     let color = Vec3::random_mm(0.5, 1.0);
-                    let fuzz = random_f64(0., 0.5);
+                    let fuzz = random_f32(0., 0.5);
                     Metal::obj(color, fuzz)
                 } else {
                     Dielectric::obj(1.5)
@@ -57,7 +57,7 @@ fn main() {
         look_at: v3!(0, 0, 0),
         defocus_angle: 0.6,
         focus_distance: 10.,
-        focal_length: 1.0,
+        // focal_length: 1.0,
     };
     let camera = Camera::new(camera_params, render_params);
     let mut output_file = std::fs::OpenOptions::new()

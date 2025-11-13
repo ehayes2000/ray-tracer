@@ -66,7 +66,7 @@ impl Fps {
         self.last = std::time::Instant::now();
         self.sum += uspf;
         if self.frames % 60 == 0 {
-            let avg_uspf = self.sum as f64 / 60.0;
+            let avg_uspf = self.sum as f32 / 60.0;
             // uspf -> fps
             let avg_fps = 1E6 / avg_uspf;
             println!("{:.3}", avg_fps);

@@ -4,21 +4,21 @@ use std::io::Write;
 use crate::color::write_color;
 use crate::hittable::Hit;
 use crate::interval::Interval;
+use crate::math::Ray;
 use crate::math::degrees_to_radians;
 use crate::math::random;
-use crate::ray::Ray;
+use crate::math::{Color, Point, Vec3};
+use crate::math::{cross, unit_vector};
 use crate::v3;
-use crate::vec3::{Color, Point, Vec3};
-use crate::vec3::{cross, unit_vector};
 
 #[derive(Debug, Clone)]
 pub struct CameraParameters {
     pub look_at: Point,
     pub look_from: Point,
-    pub vfov: f64,
-    // pub focal_length: f64,
-    pub focus_distance: f64,
-    pub defocus_angle: f64,
+    pub vfov: f32,
+    // pub focal_length: f32,
+    pub focus_distance: f32,
+    pub defocus_angle: f32,
 }
 
 impl Default for CameraParameters {
@@ -36,10 +36,10 @@ impl Default for CameraParameters {
 
 #[derive(Debug, Clone)]
 pub struct RenderParameters {
-    pub image_width: f64,
-    pub aspect_ratio: f64,
-    pub samples_per_pixel: f64,
-    pub max_bounces: f64,
+    pub image_width: f32,
+    pub aspect_ratio: f32,
+    pub samples_per_pixel: f32,
+    pub max_bounces: f32,
 }
 
 impl Default for RenderParameters {
@@ -62,15 +62,15 @@ pub struct Camera {
     pub defocus_disk_v: Vec3,
     pub pixel_delta_u: Vec3,
     pub pixel_delta_v: Vec3,
-    pub pixel_samples_scale: f64,
-    pub image_height: f64,
+    pub pixel_samples_scale: f32,
+    pub image_height: f32,
 }
 
 impl Camera {
     pub fn new(c_params: CameraParameters, r_params: RenderParameters) -> Self {
         let image_height = ((r_params.image_width / r_params.aspect_ratio).floor()).max(1.);
         let theta = degrees_to_radians(c_params.vfov);
-        let h = f64::tan(theta / 2.0);
+        let h = f32::tan(theta / 2.0);
         let viewport_height = 2.0 * h * c_params.focus_distance;
         let viewport_width = viewport_height * r_params.image_width / image_height;
 
@@ -78,8 +78,8 @@ impl Camera {
         let vup = v3!(0, 1, 0);
 
         let w = unit_vector(&(c_params.look_from - c_params.look_at));
-        let u = unit_vector(&cross(&vup, &w));
-        let v = cross(&w, &u);
+        let u = unit_vector(&cross(vup, w));
+        let v = cross(w, u);
 
         let viewport_u = viewport_width * u;
         let viewport_v = viewport_height * -v;
@@ -94,7 +94,7 @@ impl Camera {
             - viewport_v / 2.0;
 
         let defocus_radius =
-            c_params.focus_distance * f64::tan(degrees_to_radians(c_params.defocus_angle / 2.));
+            c_params.focus_distance * f32::tan(degrees_to_radians(c_params.defocus_angle / 2.));
 
         let pixel_00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
         let defocus_disk_u = u * defocus_radius;
@@ -125,12 +125,12 @@ impl Camera {
         .expect("write failed");
         for j in 0..self.image_height as i64 {
             eprint!("\r       ");
-            eprint!("\r{}%", ((j as f64 / self.image_height) * 100.0).ceil());
+            eprint!("\r{}%", ((j as f32 / self.image_height) * 100.0).ceil());
             for i in 0..self.r_params.image_width as i64 {
                 let mut color = Vec3::zero();
                 for _ in 0..self.r_params.samples_per_pixel as i64 {
-                    let r = self.get_ray(i as f64, j as f64);
-                    color += self.ray_color(&r, &world, self.r_params.max_bounces as u32);
+                    let r = self.get_ray(i as f32, j as f32);
+                    color += Self::ray_color(&r, &world, self.r_params.max_bounces as u32);
                 }
                 write_color(&mut f, &(color * self.pixel_samples_scale)).expect("io error");
             }
@@ -138,7 +138,7 @@ impl Camera {
         eprintln!();
     }
 
-    pub fn ray_color<T>(&self, r: &Ray, world: &T, remaining_bounces: u32) -> Color
+    pub fn ray_color<T>(r: &Ray, world: &T, remaining_bounces: u32) -> Color
     where
         T: Hit,
     {
@@ -147,11 +147,11 @@ impl Camera {
         }
 
         // ray hit something
-        if let Some(hit) = world.hit(r, &Interval::new(0.001, f64::MAX)) {
+        if let Some(hit) = world.hit(r, &Interval::new(0.001, f32::MAX)) {
             // something reflected ray
             if let Some(scatter) = hit.material.scatter(r, &hit) {
                 scatter.color_attenuation
-                    * self.ray_color(&scatter.ray, world, remaining_bounces - 1)
+                    * Self::ray_color(&scatter.ray, world, remaining_bounces - 1)
             } else {
                 Color::zero()
             }
@@ -162,7 +162,7 @@ impl Camera {
         }
     }
 
-    fn get_ray(&self, i: f64, j: f64) -> Ray {
+    fn get_ray(&self, i: f32, j: f32) -> Ray {
         let offset = Self::sample_square();
         let pixel_sample = self.pixel_00_loc
             + ((i + offset.0) * self.pixel_delta_u)

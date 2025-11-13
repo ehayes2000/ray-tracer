@@ -319,7 +319,7 @@ fn sphere_hit(
 fn sky_color(ray: Ray) -> vec3<f32> {
     let unit_dir = normalize(ray.direction);
     let a = 0.5 * (unit_dir.y + 1.0);
-    return (1.0 - a) * vec3f(1., 1., 1.) + a * vec3f(0.5, 0.7, 1.0);
+    return (1.0 - a) * vec_one() + a * vec3f(0.5, 0.7, 1.0);
 }
 
 fn world_hit(r: Ray) -> HitRecord {

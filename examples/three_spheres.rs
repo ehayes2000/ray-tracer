@@ -2,9 +2,9 @@ use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
     material::{Dielectric, Lambertian, Metal},
+    math::Vec3,
     sphere::Sphere,
     v3,
-    vec3::Vec3,
 };
 
 fn main() {

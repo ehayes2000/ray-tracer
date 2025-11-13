@@ -2,10 +2,10 @@ use encase::{ShaderType, StorageBuffer};
 use std::{iter, sync::Arc};
 use wgpu::util::DeviceExt;
 use wgpu::{FragmentState, VertexState};
-use winit::event;
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
-use crate::types::{Material, RenderParameters, SceneBufferEntry, Sphere, V3, cross};
+use super::types::{Material, RenderParameters, SceneBufferEntry, Sphere};
+use crate::math::cross;
 use crate::v3;
 
 pub struct State {
@@ -65,12 +65,12 @@ fn scene() -> Vec<SceneBufferEntry> {
         },
         Sphere {
             radius: 1.0,
-            location: v3!(0, 1.0, -2.5),
+            location: v3!(0., 1.0, -2.5),
             material: metal,
         },
         Sphere {
             radius: 10000.0,
-            location: v3!(0, -10000, 0),
+            location: v3!(0., -10000., 0.),
             material: ground,
         },
         Sphere {
@@ -91,6 +91,12 @@ pub struct Fps {
     pub sum: u128,
 }
 
+impl Default for Fps {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Fps {
     pub fn new() -> Self {
         Fps {
@@ -105,8 +111,8 @@ impl Fps {
         let uspf = self.last.elapsed().as_micros();
         self.last = std::time::Instant::now();
         self.sum += uspf;
-        if self.frames % 60 == 0 {
-            let avg_uspf = self.sum as f64 / 60.0;
+        if self.frames.is_multiple_of(60) {
+            let avg_uspf = self.sum as f32 / 60.0;
             let avg_fps = 1E6 / avg_uspf;
             println!("{:.3}", avg_fps);
             self.sum = 0;
@@ -315,7 +321,9 @@ impl State {
 
     pub fn update(&mut self) {
         self.fps.update();
-        self.move_dir.map(|dir| move_camera(&mut self.params, dir));
+        if let Some(dir) = self.move_dir {
+            move_camera(&mut self.params, dir);
+        }
         let mut data = StorageBuffer::new(Vec::new());
         data.write(&self.params).expect("good ok yes");
         self.queue
@@ -414,18 +422,18 @@ impl TryFrom<KeyCode> for Direction {
 fn move_camera(params: &mut RenderParameters, direction: Direction) {
     let epsilon = 0.5;
     let look_vector = params.look_from - params.look_at;
-    let fb = v3!(look_vector.0[0], 0, look_vector.0[2]).normalize();
+    let fb = v3!(look_vector.0, 0.0, look_vector.2).normalize();
     // left right is orthogonal to where looking and parallel to ground
-    let lr = cross(v3!(0, 1, 0), fb);
+    let lr = cross(v3!(0.0, 1.0, 0.0), fb);
     // forward backwards  is orthogonal to left right and and parallel to ground
     let translate = match direction {
         Direction::Backward => fb * epsilon,
         Direction::Forward => fb * epsilon * -1.0,
-        Direction::Up => v3!(0, 1, 0) * epsilon,
-        Direction::Down => v3!(0, -1, 0) * epsilon,
+        Direction::Up => v3!(0., 1., 0.) * epsilon,
+        Direction::Down => v3!(0., -1., 0.) * epsilon,
         Direction::Left => lr * epsilon * -1.0,
         Direction::Right => lr * epsilon,
     };
-    params.look_from = params.look_from + translate;
-    params.look_at = params.look_at + translate;
+    params.look_from += translate;
+    params.look_at += translate;
 }

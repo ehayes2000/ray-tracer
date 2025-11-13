@@ -7,11 +7,6 @@
 // WGSL doesn't use Rust or C layout. This package provides a trait to align
 // structs for WGSL and some types to create, read, and write buffers
 
-mod app;
-mod state;
-mod types;
-
-#[pollster::main]
-async fn main() {
-    app::App::run().unwrap();
-}
+pub mod app;
+pub mod state;
+pub mod types;

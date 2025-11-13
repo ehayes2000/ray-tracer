@@ -1,4 +1,4 @@
-use crate::vec3::Color;
+use crate::math::Color;
 use std::io::Write;
 
 use crate::interval::Interval;
@@ -8,9 +8,9 @@ static INTENSITY: Interval = Interval {
     max: 0.999,
 };
 
-fn linear_to_gamma(component: f64) -> f64 {
+fn linear_to_gamma(component: f32) -> f32 {
     if component > 0.0 {
-        f64::sqrt(component)
+        f32::sqrt(component)
     } else {
         component
     }

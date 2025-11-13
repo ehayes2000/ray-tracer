@@ -1,10 +1,14 @@
-[workspace]
-resolver = "3"
-members = [
-    "cpu",
-    "gpu"
-]
+[package]
+name = "ray_tracer"
+version = "0.1.0"
+edition = "2024"
 
-
-[workspace.dependencies]
-rand = "0.9.1"
+[dependencies]
+anyhow = "1.0.100"
+bytemuck = "1.24.0"
+encase = "0.12.0"
+env_logger = "0.11.8"
+rand = "0.9.2"
+pollster = {version = "0.4.0", features = ["macro"]}
+wgpu = { version = "27.0.1" }
+winit = { version = "0.30.12" }

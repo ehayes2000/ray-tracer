@@ -1,20 +1,20 @@
 use super::Material;
 use super::Scatter;
-use crate::ray::Ray;
-use crate::vec3::{Color, Vec3, dot, unit_vector};
+use crate::math::Ray;
+use crate::math::{Color, Vec3, dot, unit_vector};
 use std::rc::Rc;
 
 pub struct Metal {
     albedo: Color,
-    roughness: f64,
+    roughness: f32,
 }
 
 impl Metal {
-    pub fn new(albedo: Color, roughness: f64) -> Self {
+    pub fn new(albedo: Color, roughness: f32) -> Self {
         Self { albedo, roughness }
     }
 
-    pub fn obj(albedo: Color, roughness: f64) -> Rc<dyn Material> {
+    pub fn obj(albedo: Color, roughness: f32) -> Rc<dyn Material> {
         Rc::new(Self::new(albedo, roughness))
     }
 }

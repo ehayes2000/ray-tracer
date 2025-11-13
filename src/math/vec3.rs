@@ -1,37 +1,48 @@
+use encase::impl_vector;
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::math::{random, random_f64};
+use super::util::{random, random_f32};
+
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
+pub struct Vec3(pub f32, pub f32, pub f32);
+pub type Point = Vec3;
+pub type Color = Vec3;
+
+impl AsRef<[f32; 3]> for Vec3 {
+    fn as_ref(&self) -> &[f32; 3] {
+        unsafe { &*(self as *const Vec3 as *const [f32; 3]) }
+    }
+}
+
+impl AsMut<[f32; 3]> for Vec3 {
+    fn as_mut(&mut self) -> &mut [f32; 3] {
+        unsafe { &mut *(self as *mut Vec3 as *mut [f32; 3]) }
+    }
+}
+
+impl From<[f32; 3]> for Vec3 {
+    fn from(value: [f32; 3]) -> Self {
+        Self(value[0], value[1], value[2])
+    }
+}
 
 #[macro_export]
 macro_rules! v3 {
     ($x:expr, $y:expr, $z:expr) => {
-        Vec3($x as f64, $y as f64, $z as f64)
+        $crate::math::Vec3($x as f32, $y as f32, $z as f32)
     };
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct Vec3(pub f64, pub f64, pub f64);
-pub type Point = Vec3;
-pub type Color = Vec3;
+// this lets Vec3vector  be packed as a wgsl vec3<f32>
+impl_vector!(3, Vec3, f32; using AsRef AsMut From);
 
 impl Vec3 {
-    pub fn x(&self) -> f64 {
-        self.0
+    pub fn len(&self) -> f32 {
+        f32::sqrt(self.len_squared())
     }
 
-    pub fn y(&self) -> f64 {
-        self.1
-    }
-    pub fn z(&self) -> f64 {
-        self.2
-    }
-
-    pub fn len(&self) -> f64 {
-        f64::sqrt(self.len_squared())
-    }
-
-    pub fn len_squared(&self) -> f64 {
+    pub fn len_squared(&self) -> f32 {
         self.0 * self.0 + self.1 * self.1 + self.2 * self.2
     }
 
@@ -49,16 +60,16 @@ impl Vec3 {
 
             let lensq = v.len_squared();
             if 1e-160 < lensq && lensq <= 1.0 {
-                return v / f64::sqrt(lensq);
+                return v / f32::sqrt(lensq);
             }
         }
     }
 
-    pub fn random_mm(min: f64, max: f64) -> Self {
+    pub fn random_mm(min: f32, max: f32) -> Self {
         Vec3(
-            random_f64(min, max),
-            random_f64(min, max),
-            random_f64(min, max),
+            random_f32(min, max),
+            random_f32(min, max),
+            random_f32(min, max),
         )
     }
 
@@ -82,7 +93,7 @@ impl Vec3 {
 
     pub fn random_on_disk() -> Self {
         loop {
-            let p = v3!(random(), random(), 0);
+            let p = Vec3(random(), random(), 0.0);
             if p.len_squared() < 1.0 {
                 return p;
             }
@@ -98,11 +109,15 @@ impl Vec3 {
         self - 2. * dot(self, normal) * normal
     }
 
-    pub fn refract(&self, n: &Vec3, etai_over_etat: f64) -> Self {
-        let cos_theta = f64::min(dot(&-self, n), 1.0);
+    pub fn refract(&self, n: &Vec3, etai_over_etat: f32) -> Self {
+        let cos_theta = f32::min(dot(&-self, n), 1.0);
         let r_out_perp = etai_over_etat * (self + cos_theta * n);
-        let r_out_parallel = -f64::sqrt(f64::abs(1.0 - r_out_perp.len_squared())) * n;
+        let r_out_parallel = -f32::sqrt(f32::abs(1.0 - r_out_perp.len_squared())) * n;
         r_out_perp + r_out_parallel
+    }
+
+    pub fn normalize(self) -> Self {
+        self / self.len()
     }
 }
 
@@ -112,11 +127,11 @@ impl Display for Vec3 {
     }
 }
 
-pub fn dot(u: &Vec3, v: &Vec3) -> f64 {
+pub fn dot(u: &Vec3, v: &Vec3) -> f32 {
     (u.0 * v.0) + (u.1 * v.1) + (u.2 * v.2)
 }
 
-pub fn cross(u: &Vec3, v: &Vec3) -> Vec3 {
+pub fn cross(u: Vec3, v: Vec3) -> Vec3 {
     Vec3(
         u.1 * v.2 - u.2 * v.1,
         u.2 * v.0 - u.0 * v.2,
@@ -289,24 +304,24 @@ fn test_divide() {
     assert_eq!(b, expected);
 }
 
-impl DivAssign<f64> for Vec3 {
-    fn div_assign(&mut self, rhs: f64) {
+impl DivAssign<f32> for Vec3 {
+    fn div_assign(&mut self, rhs: f32) {
         self.0 /= rhs;
         self.1 /= rhs;
         self.2 /= rhs;
     }
 }
 
-impl Div<f64> for &Vec3 {
+impl Div<f32> for &Vec3 {
     type Output = Vec3;
-    fn div(self, rhs: f64) -> Self::Output {
+    fn div(self, rhs: f32) -> Self::Output {
         Vec3(self.0 / rhs, self.1 / rhs, self.2 / rhs)
     }
 }
 
-impl Div<f64> for Vec3 {
+impl Div<f32> for Vec3 {
     type Output = Vec3;
-    fn div(self, rhs: f64) -> Self::Output {
+    fn div(self, rhs: f32) -> Self::Output {
         Vec3(self.0 / rhs, self.1 / rhs, self.2 / rhs)
     }
 }
@@ -331,39 +346,66 @@ impl Mul for Vec3 {
         Self(self.0 * rhs.0, self.1 * rhs.1, self.2 * rhs.2)
     }
 }
-impl MulAssign<f64> for Vec3 {
-    fn mul_assign(&mut self, rhs: f64) {
+impl MulAssign<f32> for Vec3 {
+    fn mul_assign(&mut self, rhs: f32) {
         self.0 *= rhs;
         self.1 *= rhs;
         self.2 *= rhs;
     }
 }
 
-impl Mul<f64> for Vec3 {
+impl Mul<f32> for Vec3 {
     type Output = Vec3;
-    fn mul(mut self, rhs: f64) -> Self::Output {
+    fn mul(mut self, rhs: f32) -> Self::Output {
         self *= rhs;
         self
     }
 }
 
-impl Mul<f64> for &Vec3 {
+impl Mul<f32> for &Vec3 {
     type Output = Vec3;
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         *self * rhs
     }
 }
 
-impl Mul<Vec3> for f64 {
+impl Mul<Vec3> for f32 {
     type Output = Vec3;
     fn mul(self, rhs: Vec3) -> Self::Output {
         rhs * self
     }
 }
 
-impl Mul<&Vec3> for f64 {
+impl Mul<&Vec3> for f32 {
     type Output = Vec3;
     fn mul(self, rhs: &Vec3) -> Self::Output {
         *rhs * self
+    }
+}
+
+#[cfg(test)]
+/// tests for indexing
+/// ```compile_fail
+/// let c = Vec3::one();
+/// let dne = c.4;
+/// ```
+mod index_test {
+    use super::*;
+
+    #[test]
+    fn test_index() {
+        let v = Vec3::one();
+        assert_eq!(v.0, 1.0);
+        assert_eq!(v.1, 1.0);
+        assert_eq!(v.2, 1.0);
+    }
+
+    #[test]
+    fn test_mut() {
+        let mut v = Vec3::one();
+        v.0 = 0.0;
+        v.1 += 1.0;
+        assert_eq!(v.0, 0.0);
+        assert_eq!(v.1, 2.0);
     }
 }
