@@ -47,7 +47,7 @@ impl Default for RenderParameters {
         Self {
             image_width: 400.,
             aspect_ratio: 16.0 / 9.0,
-            max_bounces: 50.,
+            max_bounces: 20.,
             samples_per_pixel: 100.,
         }
     }

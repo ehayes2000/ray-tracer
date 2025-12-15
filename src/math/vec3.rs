@@ -9,6 +9,13 @@ pub struct Vec3(pub f32, pub f32, pub f32);
 pub type Point = Vec3;
 pub type Color = Vec3;
 
+#[macro_export]
+macro_rules! v3 {
+    ($x:expr, $y:expr, $z:expr) => {
+        $crate::math::Vec3($x as f32, $y as f32, $z as f32)
+    };
+}
+
 impl AsRef<[f32; 3]> for Vec3 {
     fn as_ref(&self) -> &[f32; 3] {
         unsafe { &*(self as *const Vec3 as *const [f32; 3]) }
@@ -27,11 +34,33 @@ impl From<[f32; 3]> for Vec3 {
     }
 }
 
-#[macro_export]
-macro_rules! v3 {
-    ($x:expr, $y:expr, $z:expr) => {
-        $crate::math::Vec3($x as f32, $y as f32, $z as f32)
-    };
+#[cfg(test)]
+mod test_array_conversions {
+    use super::*;
+    #[test]
+    fn test_as_ref() {
+        let v = v3!(5., 5., 5.);
+        let arr = v.as_ref();
+        assert_eq!(arr, &[5., 5., 5.]);
+    }
+
+    #[test]
+    fn test_as_mut() {
+        let mut v = v3!(1., 1., 1.);
+        let arr = v.as_mut();
+        arr[0] = 5.;
+        arr[1] = 5.;
+        arr[2] = 5.;
+        assert_eq!(arr, &[5., 5., 5.]);
+        assert_eq!(v, v3!(5., 5., 5.));
+    }
+
+    #[test]
+    fn test_from() {
+        let arr = [5., 4., 3.];
+        let v = Vec3::from(arr);
+        assert_eq!(v3!(5., 4., 3.), v);
+    }
 }
 
 // this lets Vec3vector  be packed as a wgsl vec3<f32>

@@ -5,4 +5,5 @@ pub mod hittable;
 pub mod interval;
 pub mod material;
 pub mod math;
+pub mod mesh;
 pub mod sphere;
