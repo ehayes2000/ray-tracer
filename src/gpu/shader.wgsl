@@ -7,7 +7,7 @@ struct Triangle {
     a: vec3<f32>,
     b: vec3<f32>,
     c: vec3<f32>,
-    material: u32
+    // material: u32
 }
 
 struct ImagePlane {
@@ -465,7 +465,7 @@ fn ray_trace(r: Ray) -> vec3<f32> {
 @group(0) @binding(0) var<storage, read> scene: array<SceneEntry>;
 @group(0) @binding(1) var<uniform> params: Params;
 @group(0) @binding(2) var<storage, read> triangles: array<Triangle>;
-@group(0) @binding(3) var<storage, read> materials: array<Material>;
+// @group(0) @binding(3) var<storage, read> materials: array<Material>;
 
 // TODO: use a vertex buffer instead of this cringe
 @vertex

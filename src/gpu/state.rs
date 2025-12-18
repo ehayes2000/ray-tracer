@@ -1,10 +1,14 @@
+use crate::math::Vec3;
 use encase::{ShaderType, StorageBuffer};
+use std::fs::File;
+use std::io::BufReader;
 use std::{iter, sync::Arc};
 use wgpu::util::DeviceExt;
 use wgpu::{FragmentState, VertexState};
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
 use super::types::{Material, RenderParameters, SceneBufferEntry, Sphere};
+use crate::gpu::types::Triangle;
 use crate::math::cross;
 use crate::v3;
 
@@ -21,6 +25,7 @@ pub struct State {
     pub param_uniform: wgpu::Buffer,
     pub params: RenderParameters,
     pub move_dir: Option<Direction>,
+    pub triangles: Vec<Triangle>,
 }
 
 fn scene() -> Vec<SceneBufferEntry> {
@@ -124,6 +129,7 @@ impl State {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<State> {
         // initial size (pog)
         let size = window.inner_size();
+        let triangles = load_model();
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -201,6 +207,16 @@ impl State {
                     },
                     visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    count: None,
+                    ty: wgpu::BindingType::Buffer {
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(Triangle::min_size()),
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    },
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                },
             ],
             label: Some("bind_group_layout_0_scene_buf"),
         });
@@ -211,7 +227,7 @@ impl State {
             .write(&scene())
             .expect("failed to write contents to scene buffer");
 
-        // ccreate and initialize scene buffer
+        // create and initialize scene buffer
         let scene_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("scene_buffer"),
             contents: &scene_buf.into_inner(),
@@ -229,6 +245,17 @@ impl State {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
+        let mut triangle_storage_buffer = StorageBuffer::new(Vec::<u8>::new());
+        triangle_storage_buffer
+            .write(&triangles)
+            .expect("write triangles");
+
+        let triangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("triangle buffer"),
+            contents: &triangle_storage_buffer.into_inner(),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             entries: &[
                 wgpu::BindGroupEntry {
@@ -238,6 +265,10 @@ impl State {
                 wgpu::BindGroupEntry {
                     binding: 1,
                     resource: param_uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: triangle_buffer.as_entire_binding(),
                 },
             ],
             label: Some("bind_group_0"),
@@ -293,6 +324,7 @@ impl State {
         });
 
         Ok(Self {
+            triangles,
             surface,
             device,
             queue,
@@ -436,4 +468,30 @@ fn move_camera(params: &mut RenderParameters, direction: Direction) {
     };
     params.look_from += translate;
     params.look_at += translate;
+}
+
+fn load_model() -> Vec<Triangle> {
+    let file = BufReader::new(File::open("models/cube.obj").unwrap());
+    let model: obj::Obj = obj::load_obj(file).unwrap();
+    assert_eq!(model.indices.len() % 3, 0, "triangulated model");
+    model
+        .indices
+        .into_iter()
+        .fold((Vec::new(), [0, 0, 0], 0), |(mut c, mut p, i), e| {
+            p[i] = e;
+            if i == 2 {
+                c.push(p);
+                (c, [0, 0, 0], 0)
+            } else {
+                (c, p, i + 1)
+            }
+        })
+        .0
+        .into_iter()
+        .map(|[a, b, c]| Triangle {
+            a: Vec3::from(model.vertices[a as usize].position),
+            b: Vec3::from(model.vertices[b as usize].position),
+            c: Vec3::from(model.vertices[c as usize].position),
+        })
+        .collect()
 }
