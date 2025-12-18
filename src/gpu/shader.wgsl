@@ -3,6 +3,13 @@ const MAX = 3.40282346638528859812e+38f;
 const EPSILON = 1e-8;
 const VUP = vec3f(0.0, 1.0, 0.0);
 
+struct Triangle {
+    a: vec3<f32>,
+    b: vec3<f32>,
+    c: vec3<f32>,
+    material: u32
+}
+
 struct ImagePlane {
     px_delta_u: vec3<f32>,
     px_delta_v: vec3<f32>,
@@ -37,13 +44,17 @@ struct Params {
     img_w: u32,
     img_h: u32,
     look_at: vec3<f32>,
-    look_from: vec3<f32>
+    look_from: vec3<f32>,
 }
 
 struct Ray {
     origin: vec3<f32>,
     direction: vec3<f32>
 }
+
+const LAMBERTIAN: u32 = 0;
+const DIELECTRIC: u32 = 1;
+const METAL: u32 = 1;
 
 struct Material {
     // Lambertian(0) | Dielectric(1) | Metal(2)
@@ -118,13 +129,20 @@ fn rand_vec_unit() -> vec3<f32> {
     return vec_zero();
 }
 
+// ____ interval ____
+fn interval_surrounds(
+    interval: Interval,
+    t: f32
+) -> bool {
+    return t < interval.max && t > interval.min;
+}
+
 // ____ scatter ____
 fn scatter_zero() -> Scatter {
     return Scatter(false, ray_zero(), vec_zero());
 }
 
 // ____ material ____
-
 fn material_scatter(
     obj: Material,
     ray: Ray,
@@ -215,10 +233,16 @@ fn material_scatter_lambertian(
     scatter.color = obj.color;
     return scatter;
 }
+
 // util
 fn material_zero() -> Material {
     return Material(0, vec_zero(), 0.0, 0.0);
 }
+
+fn material_green() -> Material  {
+    return Material(1, vec3f(1.0, 1.0, 1.0),1.5,1.5);
+}
+
 
 // ___ hit ___
 
@@ -261,6 +285,80 @@ fn vec_near_zero(v: vec3<f32>) -> bool {
     return abs(v.x) < EPSILON && abs(v.y) < EPSILON && abs(v.z) < EPSILON;
 }
 
+// ____ triangle ____
+
+fn tri_quad_material(i: i32) -> Material {
+    var m = material_zero();
+    let tri = triangles[i];
+    if (tri.a[0] < 0.0 && tri.b[0] < 0.0 && tri.c[0]< 0.0) {
+        m.color = vec3f(0.0, 1.0, 0.0);
+    } else if (tri.a[1] < 0.0 && tri.b[1] < 0.0 && tri.c[1] < 0.0){
+        m.color = vec3f(0.0, 0.0, 1.0);
+    } else {
+        m.color = vec3f(1.0, 0.0, 0.0);
+    }
+    return m;
+}
+
+fn tri_moller_trumbore_intersection(
+    i: i32,
+    r: Ray) -> HitRecord {
+    let e1 = triangles[i].b - triangles[i].a;
+    let e2 = triangles[i].c - triangles[i].a;
+    let ray_cross_e2 = cross(r.direction, e2);
+    let det = dot(e1, ray_cross_e2);
+
+    if (det > -EPSILON && det < EPSILON) {
+        return hit_zero();
+    }
+
+    let inv_det = 1.0 / det;
+    let s = r.origin - triangles[i].a;
+    let u = inv_det * dot(s, ray_cross_e2);
+
+    if (u < 0.0 || u > 1.0) {
+        return hit_zero();
+    }
+
+    let s_cross_e1 = cross(s, e1);
+    let v = inv_det * dot(r.direction, s_cross_e1);
+
+    if (v < 0.0 || u + v > 1.0) {
+        return hit_zero();
+    }
+
+    let normal = normalize(cross(e1, e2));
+    // let front_face = dot(r.direction, normal) < 0.0;
+    let front_face = true;
+    let t = inv_det * dot(e2, s_cross_e1);
+
+    if (t > EPSILON) {
+        let intersection_point = r.origin + r.direction * t;
+        var hit = hit_zero();
+        hit.hit = true;
+        hit.front_face = front_face;
+        hit.material = material_green();
+        hit.normal = normal;
+        hit.t = t;
+        hit.point = intersection_point;
+        return hit;
+    } else {
+        return hit_zero();
+    }
+}
+
+fn tri_hit(
+    i: i32,
+    r: Ray,
+    t: Interval
+) -> HitRecord {
+    let hit = tri_moller_trumbore_intersection(i, r);
+    if (hit.hit && interval_surrounds(t, hit.t)) {
+        return hit;
+    }
+    return hit_zero();
+}
+
 // ____ sphere ____
 fn sphere_hit(
     obj: Sphere,
@@ -278,7 +376,7 @@ fn sphere_hit(
         return hit;
     }
     let root_a = (h - sqrt(descriminant)) / a;
-    if (t.min < root_a && root_a < t.max){
+    if (interval_surrounds(t, root_a)) {
         let p = ray_at(ray, root_a);
         let normal = (p - obj.center) / obj.radius;
         var hit = hit_zero();
@@ -296,7 +394,7 @@ fn sphere_hit(
         return hit;
     }
     let root_b = (h + sqrt(descriminant)) / a;
-    if (t.min < root_b && root_b < t.max) {
+    if (interval_surrounds(t, root_b)) {
         let p = ray_at(ray, root_b);
         let normal = (p - obj.center) / obj.radius;
         var hit = hit_zero();
@@ -326,8 +424,9 @@ fn world_hit(r: Ray) -> HitRecord {
     let t = Interval(0.01, MAX);
     var any_hit: HitRecord = hit_zero();
     var closest = t.max;
-    for (var i = 0; i < i32(params.max_bounces); i ++) {
-        let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
+    for (var i = 0; i < i32(arrayLength(&triangles)); i ++) {
+        // let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
+        let hit = tri_hit(i, r, Interval(t.min, closest));
         if (hit.hit) {
             closest = hit.t;
             any_hit = hit;
@@ -337,12 +436,11 @@ fn world_hit(r: Ray) -> HitRecord {
 }
 
 fn ray_trace(r: Ray) -> vec3<f32> {
-    var interval = Interval(0.001, MAX);
     var bounces = 0;
     var color = vec3f(1.0, 1.0, 1.0);
     var ray = r;
 
-    while(bounces < 5) {
+    while(bounces < i32(params.max_bounces)) {
         bounces ++;
         let hit = world_hit(ray);
         if (hit.hit) {
@@ -366,6 +464,9 @@ fn ray_trace(r: Ray) -> vec3<f32> {
 
 @group(0) @binding(0) var<storage, read> scene: array<SceneEntry>;
 @group(0) @binding(1) var<uniform> params: Params;
+@group(0) @binding(2) var<storage, read> triangles: array<Triangle>;
+@group(0) @binding(3) var<storage, read> materials: array<Material>;
+
 // TODO: use a vertex buffer instead of this cringe
 @vertex
 fn vs_main(
