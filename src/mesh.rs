@@ -1,6 +1,5 @@
 use anyhow::{Result, anyhow};
 use obj::{Obj, load_obj};
-use std::path::Path;
 use std::rc::Rc;
 use std::{f32, fs::File, io::BufReader};
 

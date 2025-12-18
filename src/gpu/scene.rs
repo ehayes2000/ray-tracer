@@ -1,9 +1,10 @@
-use super::types::{Material, MaterialKind, Triangle};
+use super::mesh::Mesh;
+use super::types::{Material, Triangle};
 
 #[derive(Clone, Debug, Default)]
 pub struct Scene {
-    triangles: Vec<Triangle>,
-    materials: Vec<Material>,
+    meshes: Vec<(Mesh, u32)>,
+    pub materials: Vec<Material>,
 }
 
 impl Scene {
@@ -11,11 +12,20 @@ impl Scene {
         Self::default()
     }
 
-    pub fn with_triangles<T>(mut self, triangles: T) -> Self
-    where
-        T: IntoIterator<Item = Triangle>,
-    {
-        self.triangles.append(triangles);
+    pub fn with_mesh(mut self, mesh: Mesh, material: u32) -> Self {
+        self.meshes.push((mesh, material));
         self
+    }
+
+    pub fn with_material(mut self, material: Material) -> Self {
+        self.materials.push(material);
+        self
+    }
+
+    pub fn triangles(&self) -> Vec<Triangle> {
+        self.meshes
+            .iter()
+            .flat_map(|(mesh, material)| mesh.clone().into_triangles(*material))
+            .collect()
     }
 }

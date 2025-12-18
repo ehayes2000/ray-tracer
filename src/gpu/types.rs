@@ -7,6 +7,7 @@ pub struct Triangle {
     pub a: Vec3,
     pub b: Vec3,
     pub c: Vec3,
+    pub material: u32,
 }
 
 #[derive(Clone, Debug, ShaderType)]
@@ -14,6 +15,24 @@ pub struct Sphere {
     pub radius: f32,
     pub location: Vec3,
     pub material: Material,
+}
+
+#[derive(Clone, Debug)]
+pub enum MaterialKind {
+    Lambertian = 0,
+    Dielectric = 1,
+    Metal = 2,
+}
+
+impl MaterialKind {
+    pub fn try_from_i32(v: i32) -> Option<Self> {
+        match v {
+            0 => Some(Self::Lambertian),
+            1 => Some(Self::Dielectric),
+            2 => Some(Self::Metal),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, ShaderType)]
@@ -47,7 +66,7 @@ impl Default for RenderParameters {
         Self {
             img_w: 512,
             img_h: 512,
-            max_bounces: 15,
+            max_bounces: 2,
             samples_per_px: 10,
             focal_len: 1.0,
             look_at: v3!(0.0, 0.0, 0.0),

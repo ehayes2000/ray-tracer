@@ -7,33 +7,13 @@ struct Triangle {
     a: vec3<f32>,
     b: vec3<f32>,
     c: vec3<f32>,
-    // material: u32
+    material: u32
 }
 
 struct ImagePlane {
     px_delta_u: vec3<f32>,
     px_delta_v: vec3<f32>,
     px_00_loc: vec3<f32>,
-}
-
-fn image_plane() -> ImagePlane {
-    let W = normalize(params.look_from - params.look_at);
-    let U = normalize(cross(VUP, W));
-    let V = cross(W, U);
-    let H = tan(radians(params.vfov / 2.0));
-    let VIEW_HEIGHT = 2.0 * H * params.focal_len;
-    let VIEW_WIDTH = VIEW_HEIGHT * f32(params.img_w) / f32(params.img_h);
-    let VIEW_U = VIEW_WIDTH * U;
-    let VIEW_V = VIEW_HEIGHT * -V;
-    let PX_DELTA_U = VIEW_U / f32(params.img_w);
-    let PX_DELTA_V = VIEW_V / f32(params.img_h);
-    let VIEW_UP_LEFT = params.look_from - (params.focal_len * W) - (VIEW_U / 2.0) - (VIEW_V / 2.0);
-    let PX_00_LOC = VIEW_UP_LEFT + 0.5 * (PX_DELTA_U + PX_DELTA_V);
-    return ImagePlane(
-        PX_DELTA_U,
-        PX_DELTA_V,
-        PX_00_LOC
-    );
 }
 
 struct Params {
@@ -97,6 +77,26 @@ struct Sphere {
     material: Material,
 }
 
+fn image_plane() -> ImagePlane {
+    let W = normalize(params.look_from - params.look_at);
+    let U = normalize(cross(VUP, W));
+    let V = cross(W, U);
+    let H = tan(radians(params.vfov / 2.0));
+    let VIEW_HEIGHT = 2.0 * H * params.focal_len;
+    let VIEW_WIDTH = VIEW_HEIGHT * f32(params.img_w) / f32(params.img_h);
+    let VIEW_U = VIEW_WIDTH * U;
+    let VIEW_V = VIEW_HEIGHT * -V;
+    let PX_DELTA_U = VIEW_U / f32(params.img_w);
+    let PX_DELTA_V = VIEW_V / f32(params.img_h);
+    let VIEW_UP_LEFT = params.look_from - (params.focal_len * W) - (VIEW_U / 2.0) - (VIEW_V / 2.0);
+    let PX_00_LOC = VIEW_UP_LEFT + 0.5 * (PX_DELTA_U + PX_DELTA_V);
+    return ImagePlane(
+        PX_DELTA_U,
+        PX_DELTA_V,
+        PX_00_LOC
+    );
+}
+
 // ___ random ___
 // shoutout
 // https://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
@@ -149,9 +149,9 @@ fn material_scatter(
     hit: HitRecord
 ) -> Scatter {
 
-    if (obj.kind == 0 ){
+    if (obj.kind == LAMBERTIAN ){
         return material_scatter_lambertian(obj, ray, hit);
-    } else if (obj.kind == 1) {
+    } else if (obj.kind == DIELECTRIC) {
         return material_scatter_dielectric(obj, ray, hit);
     } else {
         return material_scatter_metal(obj, ray, hit);
@@ -337,7 +337,7 @@ fn tri_moller_trumbore_intersection(
         var hit = hit_zero();
         hit.hit = true;
         hit.front_face = front_face;
-        hit.material = material_green();
+        hit.material = materials[triangles[i].material];
         hit.normal = normal;
         hit.t = t;
         hit.point = intersection_point;
@@ -425,8 +425,8 @@ fn world_hit(r: Ray) -> HitRecord {
     var any_hit: HitRecord = hit_zero();
     var closest = t.max;
     for (var i = 0; i < i32(arrayLength(&triangles)); i ++) {
-        // let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
-        let hit = tri_hit(i, r, Interval(t.min, closest));
+        let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
+        // let hit = tri_hit(i, r, Interval(t.min, closest));
         if (hit.hit) {
             closest = hit.t;
             any_hit = hit;
@@ -465,7 +465,7 @@ fn ray_trace(r: Ray) -> vec3<f32> {
 @group(0) @binding(0) var<storage, read> scene: array<SceneEntry>;
 @group(0) @binding(1) var<uniform> params: Params;
 @group(0) @binding(2) var<storage, read> triangles: array<Triangle>;
-// @group(0) @binding(3) var<storage, read> materials: array<Material>;
+@group(0) @binding(3) var<storage, read> materials: array<Material>;
 
 // TODO: use a vertex buffer instead of this cringe
 @vertex

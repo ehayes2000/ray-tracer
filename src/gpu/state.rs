@@ -1,3 +1,5 @@
+use super::mesh::Mesh;
+use super::scene::Scene;
 use crate::math::Vec3;
 use encase::{ShaderType, StorageBuffer};
 use std::fs::File;
@@ -8,7 +10,7 @@ use wgpu::{FragmentState, VertexState};
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
 use super::types::{Material, RenderParameters, SceneBufferEntry, Sphere};
-use crate::gpu::types::Triangle;
+use crate::gpu::types::{MaterialKind, Triangle};
 use crate::math::cross;
 use crate::v3;
 
@@ -25,10 +27,10 @@ pub struct State {
     pub param_uniform: wgpu::Buffer,
     pub params: RenderParameters,
     pub move_dir: Option<Direction>,
-    pub triangles: Vec<Triangle>,
+    pub scene: Scene,
 }
 
-fn scene() -> Vec<SceneBufferEntry> {
+fn sphere_scene() -> Vec<SceneBufferEntry> {
     let color = Material {
         kind: 0,
         color: v3!(0.7, 0.2, 0.2),
@@ -129,7 +131,7 @@ impl State {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<State> {
         // initial size (pog)
         let size = window.inner_size();
-        let triangles = load_model();
+        let scene = mesh_scene();
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -194,7 +196,7 @@ impl State {
                         min_binding_size: Some(SceneBufferEntry::min_size()),
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
                     },
-                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                 },
                 // render param buffer
                 wgpu::BindGroupLayoutEntry {
@@ -205,7 +207,7 @@ impl State {
                         min_binding_size: Some(RenderParameters::min_size()),
                         ty: wgpu::BufferBindingType::Uniform,
                     },
-                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
@@ -217,6 +219,16 @@ impl State {
                     },
                     visibility: wgpu::ShaderStages::FRAGMENT,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    count: None,
+                    ty: wgpu::BindingType::Buffer {
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(Material::min_size()),
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    },
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                },
             ],
             label: Some("bind_group_layout_0_scene_buf"),
         });
@@ -224,7 +236,7 @@ impl State {
         // create content for scene buffer
         let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
         scene_buf
-            .write(&scene())
+            .write(&sphere_scene())
             .expect("failed to write contents to scene buffer");
 
         // create and initialize scene buffer
@@ -246,13 +258,25 @@ impl State {
         });
 
         let mut triangle_storage_buffer = StorageBuffer::new(Vec::<u8>::new());
+
         triangle_storage_buffer
-            .write(&triangles)
+            .write(&scene.triangles())
             .expect("write triangles");
 
         let triangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("triangle buffer"),
             contents: &triangle_storage_buffer.into_inner(),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+
+        let mut material_buffer_data = StorageBuffer::new(Vec::<u8>::new());
+        material_buffer_data
+            .write(&scene.materials)
+            .expect("write materials");
+
+        let material_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("material_buffer"),
+            contents: &material_buffer_data.into_inner(),
             usage: wgpu::BufferUsages::STORAGE,
         });
 
@@ -269,6 +293,10 @@ impl State {
                 wgpu::BindGroupEntry {
                     binding: 2,
                     resource: triangle_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: material_buffer.as_entire_binding(),
                 },
             ],
             label: Some("bind_group_0"),
@@ -324,7 +352,7 @@ impl State {
         });
 
         Ok(Self {
-            triangles,
+            scene,
             surface,
             device,
             queue,
@@ -470,28 +498,53 @@ fn move_camera(params: &mut RenderParameters, direction: Direction) {
     params.look_at += translate;
 }
 
-fn load_model() -> Vec<Triangle> {
-    let file = BufReader::new(File::open("models/cube.obj").unwrap());
-    let model: obj::Obj = obj::load_obj(file).unwrap();
-    assert_eq!(model.indices.len() % 3, 0, "triangulated model");
-    model
-        .indices
-        .into_iter()
-        .fold((Vec::new(), [0, 0, 0], 0), |(mut c, mut p, i), e| {
-            p[i] = e;
-            if i == 2 {
-                c.push(p);
-                (c, [0, 0, 0], 0)
-            } else {
-                (c, p, i + 1)
-            }
-        })
-        .0
-        .into_iter()
-        .map(|[a, b, c]| Triangle {
-            a: Vec3::from(model.vertices[a as usize].position),
-            b: Vec3::from(model.vertices[b as usize].position),
-            c: Vec3::from(model.vertices[c as usize].position),
-        })
-        .collect()
+fn mesh_scene() -> Scene {
+    let glass = Material {
+        kind: MaterialKind::Metal as _,
+        color: v3!(0.5, 1.5, 0.5),
+        refractive_index: 1.5,
+        roughness: 0.3,
+    };
+
+    let red = Material {
+        kind: MaterialKind::Lambertian as _,
+        color: v3!(1.0, 0.0, 0.0),
+        refractive_index: 0.,
+        roughness: 0.,
+    };
+
+    let green = Material {
+        kind: MaterialKind::Lambertian as _,
+        color: v3!(0.0, 1.0, 0.0),
+        refractive_index: 1.0,
+        roughness: 0.,
+    };
+
+    let blue = Material {
+        kind: MaterialKind::Lambertian as _,
+        color: v3!(0.0, 0.0, 1.0),
+        refractive_index: 0.0,
+        roughness: 0.,
+    };
+
+    let cube = Mesh::from_file("models/cube.obj").expect("cube");
+    let cube2 = cube.clone().translate(v3!(0, 0.0, 3.0));
+    let cube3 = cube.clone().translate(v3!(-3., 0.0, 1.0));
+    let plane = Mesh::from_file("models/plane.obj")
+        .expect("plane")
+        .translate(v3!(0, -1.01, 0));
+    let icosphere = Mesh::from_file("models/icosphere.obj")
+        .expect("icosphere")
+        .translate(v3!(3, 0, 0));
+
+    Scene::new()
+        .with_mesh(cube, 4)
+        .with_mesh(cube2, 1)
+        .with_mesh(plane, 2)
+        .with_mesh(cube3, 1)
+        .with_mesh(icosphere, 4)
+        .with_material(red)
+        .with_material(green)
+        .with_material(blue)
+        .with_material(glass)
 }
