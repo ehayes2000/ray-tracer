@@ -425,8 +425,8 @@ fn world_hit(r: Ray) -> HitRecord {
     var any_hit: HitRecord = hit_zero();
     var closest = t.max;
     for (var i = 0; i < i32(arrayLength(&triangles)); i ++) {
-        let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
-        // let hit = tri_hit(i, r, Interval(t.min, closest));
+        // let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
+        let hit = tri_hit(i, r, Interval(t.min, closest));
         if (hit.hit) {
             closest = hit.t;
             any_hit = hit;

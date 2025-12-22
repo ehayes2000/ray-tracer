@@ -499,32 +499,32 @@ fn move_camera(params: &mut RenderParameters, direction: Direction) {
 }
 
 fn mesh_scene() -> Scene {
-    let glass = Material {
-        kind: MaterialKind::Metal as _,
-        color: v3!(0.5, 1.5, 0.5),
-        refractive_index: 1.5,
-        roughness: 0.3,
-    };
-
-    let red = Material {
-        kind: MaterialKind::Lambertian as _,
-        color: v3!(1.0, 0.0, 0.0),
-        refractive_index: 0.,
-        roughness: 0.,
-    };
-
-    let green = Material {
-        kind: MaterialKind::Lambertian as _,
-        color: v3!(0.0, 1.0, 0.0),
-        refractive_index: 1.0,
-        roughness: 0.,
-    };
-
-    let blue = Material {
-        kind: MaterialKind::Lambertian as _,
-        color: v3!(0.0, 0.0, 1.0),
+    let ground = Material {
+        kind: MaterialKind::LAMBERTIAN,
+        color: v3!(0.8, 0.8, 0),
         refractive_index: 0.0,
+        roughness: 0.0,
+    };
+
+    let glass = Material {
+        kind: MaterialKind::DIELECTRIC,
+        color: v3!(0.1, 0.2, 0.5),
+        refractive_index: 1.5,
         roughness: 0.,
+    };
+
+    let bluish = Material {
+        kind: MaterialKind::METAL,
+        color: v3!(0.1, 0.2, 0.5),
+        refractive_index: 0.0,
+        roughness: 1.0,
+    };
+
+    let metal = Material {
+        kind: MaterialKind::LAMBERTIAN,
+        color: v3!(0.8, 0.6, 0.2),
+        refractive_index: 0.0,
+        roughness: 1.0,
     };
 
     let cube = Mesh::from_file("models/cube.obj").expect("cube");
@@ -533,18 +533,24 @@ fn mesh_scene() -> Scene {
     let plane = Mesh::from_file("models/plane.obj")
         .expect("plane")
         .translate(v3!(0, -1.01, 0));
-    let icosphere = Mesh::from_file("models/icosphere.obj")
-        .expect("icosphere")
-        .translate(v3!(3, 0, 0));
+    let dk = Mesh::from_file("models/dk-scaled.obj").expect("dk");
+    // let icosphere = Mesh::from_file("models/icosphere.obj")
+    //     .expect("icosphere")
+    //     .translate(v3!(3, 0, 0));
+
+    // let ground = Lambertian::obj(Vec3(0.8, 0.8, 0.0));
+    // let left = Dielectric::obj(1.5);
+    // let bubble = Dielectric::obj(1.0 / 1.5);
+    // let center = Lambertian::obj(Vec3(0.1, 0.2, 0.5));
+    // let right = Metal::obj(Vec3(0.8, 0.6, 0.2), 1.0);
 
     Scene::new()
-        .with_mesh(cube, 4)
+        .with_mesh(dk, 2)
         .with_mesh(cube2, 1)
-        .with_mesh(plane, 2)
-        .with_mesh(cube3, 1)
-        .with_mesh(icosphere, 4)
-        .with_material(red)
-        .with_material(green)
-        .with_material(blue)
+        .with_mesh(plane, 0)
+        .with_mesh(cube3, 3)
+        .with_material(ground)
         .with_material(glass)
+        .with_material(bluish)
+        .with_material(metal)
 }

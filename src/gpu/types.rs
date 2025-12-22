@@ -17,22 +17,10 @@ pub struct Sphere {
     pub material: Material,
 }
 
-#[derive(Clone, Debug)]
-pub enum MaterialKind {
-    Lambertian = 0,
-    Dielectric = 1,
-    Metal = 2,
-}
-
-impl MaterialKind {
-    pub fn try_from_i32(v: i32) -> Option<Self> {
-        match v {
-            0 => Some(Self::Lambertian),
-            1 => Some(Self::Dielectric),
-            2 => Some(Self::Metal),
-            _ => None,
-        }
-    }
+pub mod MaterialKind {
+    pub const LAMBERTIAN: u32 = 0;
+    pub const DIELECTRIC: u32 = 1;
+    pub const METAL: u32 = 2;
 }
 
 #[derive(Clone, Debug, ShaderType)]
@@ -64,10 +52,10 @@ pub struct RenderParameters {
 impl Default for RenderParameters {
     fn default() -> Self {
         Self {
-            img_w: 512,
-            img_h: 512,
+            img_w: 256,
+            img_h: 256,
             max_bounces: 2,
-            samples_per_px: 10,
+            samples_per_px: 25,
             focal_len: 1.0,
             look_at: v3!(0.0, 0.0, 0.0),
             look_from: v3!(5., 2., 0.),
