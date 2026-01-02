@@ -8,6 +8,7 @@
 // structs for WGSL and some types to create, read, and write buffers
 
 pub mod app;
+mod bvh;
 pub mod mesh;
 pub mod scene;
 pub mod state;

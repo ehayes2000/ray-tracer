@@ -2,7 +2,7 @@ use crate::math::Vec3;
 use crate::v3;
 use encase::ShaderType;
 
-#[derive(Clone, Debug, ShaderType)]
+#[derive(Clone, Debug, ShaderType, Default)]
 pub struct Triangle {
     pub a: Vec3,
     pub b: Vec3,
@@ -52,10 +52,10 @@ pub struct RenderParameters {
 impl Default for RenderParameters {
     fn default() -> Self {
         Self {
-            img_w: 256,
-            img_h: 256,
-            max_bounces: 2,
-            samples_per_px: 25,
+            img_w: 128,
+            img_h: 128,
+            max_bounces: 5,
+            samples_per_px: 50,
             focal_len: 1.0,
             look_at: v3!(0.0, 0.0, 0.0),
             look_from: v3!(5., 2., 0.),

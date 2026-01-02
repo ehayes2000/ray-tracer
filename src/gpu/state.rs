@@ -1,9 +1,7 @@
+use super::bvh::{BvhShaderNode, build_shader_bvh};
 use super::mesh::Mesh;
 use super::scene::Scene;
-use crate::math::Vec3;
 use encase::{ShaderType, StorageBuffer};
-use std::fs::File;
-use std::io::BufReader;
 use std::{iter, sync::Arc};
 use wgpu::util::DeviceExt;
 use wgpu::{FragmentState, VertexState};
@@ -132,6 +130,7 @@ impl State {
         // initial size (pog)
         let size = window.inner_size();
         let scene = mesh_scene();
+        let bvh = build_shader_bvh(scene.triangles());
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -214,7 +213,7 @@ impl State {
                     count: None,
                     ty: wgpu::BindingType::Buffer {
                         has_dynamic_offset: false,
-                        min_binding_size: Some(Triangle::min_size()),
+                        min_binding_size: Some(BvhShaderNode::<Triangle>::min_size()),
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
                     },
                     visibility: wgpu::ShaderStages::FRAGMENT,
@@ -230,7 +229,7 @@ impl State {
                     visibility: wgpu::ShaderStages::FRAGMENT,
                 },
             ],
-            label: Some("bind_group_layout_0_scene_buf"),
+            label: Some("bind_group_0_layout"),
         });
 
         // create content for scene buffer
@@ -260,7 +259,7 @@ impl State {
         let mut triangle_storage_buffer = StorageBuffer::new(Vec::<u8>::new());
 
         triangle_storage_buffer
-            .write(&scene.triangles())
+            .write(&bvh.0)
             .expect("write triangles");
 
         let triangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

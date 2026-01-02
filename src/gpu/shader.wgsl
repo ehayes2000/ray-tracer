@@ -2,6 +2,25 @@ const MIN = 1.17549435082228750797e-38f;
 const MAX = 3.40282346638528859812e+38f;
 const EPSILON = 1e-8;
 const VUP = vec3f(0.0, 1.0, 0.0);
+const LEAF = 1;
+const INTERIOR = 0;
+
+
+struct Bounds {
+    p_min: vec3<f32>,
+    p_max: vec3<f32>
+}
+
+struct BvhNode {
+    // Interior(0) | Leaf(1)
+    kind: u32,
+    axis: i32,
+    second_child_offset: i32,
+    bounds: Bounds,
+    centroid: vec3<f32>,
+    primitive: Triangle
+}
+
 
 struct Triangle {
     a: vec3<f32>,
@@ -285,11 +304,51 @@ fn vec_near_zero(v: vec3<f32>) -> bool {
     return abs(v.x) < EPSILON && abs(v.y) < EPSILON && abs(v.z) < EPSILON;
 }
 
+// ____ Bounds ____
+fn bounds_select(bounds: Bounds, i: bool) -> vec3<f32> {
+    return select(bounds.p_min, bounds.p_max, i);
+}
+
+fn bounds_intersect(
+    bounds: Bounds,
+    interval: Interval,
+    ray: Ray,
+    inv_dir: vec3<f32>,
+    is_neg: vec3<i32>,
+) -> bool {
+    var t_min = (bounds_select(bounds, bool(is_neg.x)).x - ray.origin.x) * inv_dir.x;
+    var t_max = (bounds_select(bounds, bool(1 - is_neg.x)).x - ray.origin.x) * inv_dir.x;
+    let ty_min = (bounds_select(bounds, bool(is_neg.y)).y - ray.origin.y) * inv_dir.y;
+    let ty_max = (bounds_select(bounds, bool(1 - is_neg.y)).y - ray.origin.y) * inv_dir.y;
+    if (t_min > ty_max || ty_min > t_max) {
+        return false;
+    }
+    if (ty_min > t_min) {
+        t_min = ty_min;
+    }
+    if (ty_max < t_max){
+        t_max = ty_max;
+    }
+
+    let tz_min = (bounds_select(bounds, bool(is_neg.z)).z - ray.origin.z) * inv_dir.z;
+    let tz_max = (bounds_select(bounds, bool(1 - is_neg.z)).z - ray.origin.z) * inv_dir.z;
+    if (t_min > tz_max || tz_min > t_max) {
+        return false;
+    }
+    if (tz_min > t_min) {
+        t_min = tz_min;
+    }
+    if (tz_max < t_max) {
+        t_max = tz_max;
+    }
+    return (t_min < interval.max) && (t_max > 0.0);
+}
+
 // ____ triangle ____
 
 fn tri_quad_material(i: i32) -> Material {
     var m = material_zero();
-    let tri = triangles[i];
+    let tri = triangles[i].primitive;
     if (tri.a[0] < 0.0 && tri.b[0] < 0.0 && tri.c[0]< 0.0) {
         m.color = vec3f(0.0, 1.0, 0.0);
     } else if (tri.a[1] < 0.0 && tri.b[1] < 0.0 && tri.c[1] < 0.0){
@@ -303,8 +362,8 @@ fn tri_quad_material(i: i32) -> Material {
 fn tri_moller_trumbore_intersection(
     i: i32,
     r: Ray) -> HitRecord {
-    let e1 = triangles[i].b - triangles[i].a;
-    let e2 = triangles[i].c - triangles[i].a;
+    let e1 = triangles[i].primitive.b - triangles[i].primitive.a;
+    let e2 = triangles[i].primitive.c - triangles[i].primitive.a;
     let ray_cross_e2 = cross(r.direction, e2);
     let det = dot(e1, ray_cross_e2);
 
@@ -313,7 +372,7 @@ fn tri_moller_trumbore_intersection(
     }
 
     let inv_det = 1.0 / det;
-    let s = r.origin - triangles[i].a;
+    let s = r.origin - triangles[i].primitive.a;
     let u = inv_det * dot(s, ray_cross_e2);
 
     if (u < 0.0 || u > 1.0) {
@@ -337,7 +396,7 @@ fn tri_moller_trumbore_intersection(
         var hit = hit_zero();
         hit.hit = true;
         hit.front_face = front_face;
-        hit.material = materials[triangles[i].material];
+        hit.material = materials[triangles[i].primitive.material];
         hit.normal = normal;
         hit.t = t;
         hit.point = intersection_point;
@@ -420,11 +479,63 @@ fn sky_color(ray: Ray) -> vec3<f32> {
     return (1.0 - a) * vec_one() + a * vec3f(0.5, 0.7, 1.0);
 }
 
+fn world_hit_bvh(ray: Ray) -> HitRecord {
+    let inv_dir = 1.0 / ray.direction;
+    let is_neg = vec3i( i32(inv_dir.x < 0.), i32(inv_dir.y < 0.), i32(inv_dir.z < 0.));
+    var to_visit_offset = 0;
+    var current_node_i = 0;
+    var nodes_to_visit = array<i32, 64>();
+    var interval = Interval(EPSILON, MAX);
+    var hit = hit_zero();
+    // var a =0;
+    while (true) {
+    // if (a > 100){
+    // break;
+    // }
+    // a +=1;
+        let node = &triangles[current_node_i];
+        if (bounds_intersect(node.bounds, interval, ray, inv_dir, is_neg)){
+            if (node.kind == LEAF) {
+                let leaf_hit = tri_moller_trumbore_intersection(current_node_i, ray);
+                if (leaf_hit.hit && leaf_hit.t < interval.max){
+                    hit = leaf_hit;
+                    interval.max = hit.t;
+                }
+                if (to_visit_offset == 0) {
+                    break;
+                }
+                to_visit_offset -= 1;
+                current_node_i = nodes_to_visit[to_visit_offset];
+            } else {
+                if (bool(is_neg[node.axis])) {
+                    nodes_to_visit[to_visit_offset] = current_node_i + 1;
+                    to_visit_offset += 1;
+                    current_node_i = node.second_child_offset;
+                } else {
+                    nodes_to_visit[to_visit_offset] = node.second_child_offset;
+                    to_visit_offset += 1;
+                    current_node_i += 1;
+                }
+            }
+        } else {
+            if(to_visit_offset == 0) {
+                break;
+            }
+            to_visit_offset -= 1;
+            current_node_i = nodes_to_visit[to_visit_offset];
+        }
+    }
+    return hit;
+}
+
 fn world_hit(r: Ray) -> HitRecord {
     let t = Interval(0.01, MAX);
     var any_hit: HitRecord = hit_zero();
     var closest = t.max;
     for (var i = 0; i < i32(arrayLength(&triangles)); i ++) {
+        if (triangles[i].kind == 0){
+            continue;
+        }
         // let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
         let hit = tri_hit(i, r, Interval(t.min, closest));
         if (hit.hit) {
@@ -442,7 +553,7 @@ fn ray_trace(r: Ray) -> vec3<f32> {
 
     while(bounces < i32(params.max_bounces)) {
         bounces ++;
-        let hit = world_hit(ray);
+        let hit = world_hit_bvh(ray);
         if (hit.hit) {
             let scatter = material_scatter(hit.material, ray, hit);
             ray = scatter.ray;
@@ -464,10 +575,9 @@ fn ray_trace(r: Ray) -> vec3<f32> {
 
 @group(0) @binding(0) var<storage, read> scene: array<SceneEntry>;
 @group(0) @binding(1) var<uniform> params: Params;
-@group(0) @binding(2) var<storage, read> triangles: array<Triangle>;
+@group(0) @binding(2) var<storage, read> triangles: array<BvhNode>;
 @group(0) @binding(3) var<storage, read> materials: array<Material>;
 
-// TODO: use a vertex buffer instead of this cringe
 @vertex
 fn vs_main(
     @builtin(vertex_index) in_vertex_index: u32,

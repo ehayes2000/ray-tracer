@@ -1,4 +1,5 @@
 use encase::impl_vector;
+use std::f32;
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -147,6 +148,14 @@ impl Vec3 {
 
     pub fn normalize(self) -> Self {
         self / self.len()
+    }
+
+    pub fn max() -> Self {
+        Self(f32::MAX, f32::MAX, f32::MAX)
+    }
+
+    pub fn min() -> Self {
+        Self(f32::MIN, f32::MIN, f32::MIN)
     }
 }
 
