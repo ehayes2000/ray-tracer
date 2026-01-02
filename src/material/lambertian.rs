@@ -1,7 +1,7 @@
 pub use super::{Material, Scatter};
 use crate::hittable::HitRecord;
-use crate::ray::Ray;
-use crate::vec3::{Color, Vec3};
+use crate::math::Ray;
+use crate::math::{Color, Vec3};
 use std::rc::Rc;
 
 pub struct Lambertian {

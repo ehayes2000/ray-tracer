@@ -1,7 +1,7 @@
 use crate::interval::Interval;
 use crate::material::Material;
-use crate::ray::Ray;
-use crate::vec3::{Point, Vec3, dot};
+use crate::math::Ray;
+use crate::math::{Point, Vec3, dot};
 use std::rc::Rc;
 
 pub trait Hit {
@@ -11,7 +11,7 @@ pub trait Hit {
 #[derive(Clone)]
 pub struct HitRecord {
     pub p: Point,
-    pub t: f64,
+    pub t: f32,
     pub normal: Vec3,
     pub front_face: bool,
     pub material: Rc<dyn Material>,
@@ -22,7 +22,7 @@ impl HitRecord {
         p: Vec3,
         r: &Ray,
         u_out_norm: Vec3,
-        t: f64,
+        t: f32,
         material: Rc<dyn Material>,
     ) -> Self {
         let front_face = dot(&r.direction, &u_out_norm) < 0.0;
@@ -37,6 +37,7 @@ impl HitRecord {
     }
 }
 
+#[derive(Default)]
 pub struct HittableList {
     pub objects: Vec<Box<dyn Hit>>,
 }

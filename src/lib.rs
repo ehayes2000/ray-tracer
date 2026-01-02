@@ -1,9 +1,9 @@
 pub mod camera;
 pub mod color;
+pub mod gpu;
 pub mod hittable;
 pub mod interval;
 pub mod material;
 pub mod math;
-pub mod ray;
+pub mod mesh;
 pub mod sphere;
-pub mod vec3;

@@ -1,24 +1,24 @@
 use super::hittable::{Hit, HitRecord};
 use super::interval::Interval;
 use super::material::Material;
-use super::ray::Ray;
-use super::vec3::{Point, dot};
+use super::math::Ray;
+use super::math::{Point, dot};
 use std::rc::Rc;
 pub struct Sphere {
     pub center: Point,
-    pub radius: f64,
+    pub radius: f32,
     pub material: Rc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64, material: Rc<dyn Material>) -> Self {
+    pub fn new(center: Point, radius: f32, material: Rc<dyn Material>) -> Self {
         Self {
             center,
             radius,
             material,
         }
     }
-    pub fn obj(center: Point, radius: f64, material: Rc<dyn Material>) -> Box<dyn Hit> {
+    pub fn obj(center: Point, radius: f32, material: Rc<dyn Material>) -> Box<dyn Hit> {
         Box::new(Self::new(center, radius, material))
     }
 }
