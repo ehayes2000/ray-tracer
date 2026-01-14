@@ -13,3 +13,4 @@ pollster = {version = "0.4.0", features = ["macro"]}
 wgpu = { version = "27.0.1" }
 winit = { version = "0.30.12" }
 obj-rs = "0.7.4"
+image = "0.25.9"

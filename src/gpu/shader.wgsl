@@ -21,7 +21,6 @@ struct BvhNode {
     primitive: Triangle
 }
 
-
 struct Triangle {
     a: vec3<f32>,
     b: vec3<f32>,
