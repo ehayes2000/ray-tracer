@@ -535,7 +535,6 @@ fn world_hit(r: Ray) -> HitRecord {
         if (triangles[i].kind == 0){
             continue;
         }
-        // let hit = sphere_hit(scene[i].sphere, r, Interval(t.min, closest));
         let hit = tri_hit(i, r, Interval(t.min, closest));
         if (hit.hit) {
             closest = hit.t;
@@ -572,10 +571,9 @@ fn ray_trace(r: Ray) -> vec3<f32> {
     return color;
 }
 
-@group(0) @binding(0) var<storage, read> scene: array<SceneEntry>;
-@group(0) @binding(1) var<uniform> params: Params;
-@group(0) @binding(2) var<storage, read> triangles: array<BvhNode>;
-@group(0) @binding(3) var<storage, read> materials: array<Material>;
+@group(0) @binding(0) var<uniform> params: Params
+@group(0) @binding(1) var<storage, read> triangles: array<BvhNode>;
+@group(0) @binding(2) var<storage, read> materials: array<Material>;
 
 @vertex
 fn vs_main(

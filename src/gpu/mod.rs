@@ -10,6 +10,7 @@
 pub mod app;
 mod bvh;
 pub mod mesh;
+mod resources;
 pub mod scene;
 pub mod state;
 pub mod types;

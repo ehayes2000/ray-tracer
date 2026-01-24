@@ -3,11 +3,11 @@ use super::mesh::Mesh;
 use super::scene::Scene;
 use encase::{ShaderType, StorageBuffer};
 use std::{iter, sync::Arc};
-use wgpu::util::DeviceExt;
-use wgpu::{FragmentState, VertexState};
+use wgpu::{FragmentState, TextureUsages, VertexState};
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
 use super::types::{Material, RenderParameters, SceneBufferEntry, Sphere};
+use crate::gpu::resources::Resources;
 use crate::gpu::types::{MaterialKind, Triangle};
 use crate::math::cross;
 use crate::v3;
@@ -17,15 +17,11 @@ pub struct State {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
+    pub compute_pipeline: wgpu::ComputePipeline,
+    pub render_pipeline: wgpu::RenderPipeline,
     pub is_surface_configured: bool,
     pub window: Arc<Window>,
-    pub pipeline: wgpu::RenderPipeline,
-    pub fps: Fps,
-    pub bind_group: wgpu::BindGroup,
-    pub param_uniform: wgpu::Buffer,
-    pub params: RenderParameters,
-    pub move_dir: Option<Direction>,
-    pub scene: Scene,
+    pub resources: Resources,
 }
 
 fn sphere_scene() -> Vec<SceneBufferEntry> {
@@ -167,7 +163,7 @@ impl State {
             .iter()
             .copied()
             .find(|f| f.is_srgb())
-            .unwrap_or(surface_caps.formats[0]);
+            .expect("SRGB Surface");
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -180,139 +176,29 @@ impl State {
             view_formats: vec![],
         };
 
-        // compile shader
-        let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+        let render_shader = device.create_shader_module(wgpu::include_wgsl!("render.wgsl"));
+        let compute_shader = device.create_shader_module(wgpu::include_wgsl!("compute.wgsl"));
 
-        // set layout for scene and storage buffers
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                // scene buffer
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    count: None,
-                    ty: wgpu::BindingType::Buffer {
-                        has_dynamic_offset: false,
-                        min_binding_size: Some(SceneBufferEntry::min_size()),
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    },
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                },
-                // render param buffer
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    count: None,
-                    ty: wgpu::BindingType::Buffer {
-                        has_dynamic_offset: false,
-                        min_binding_size: Some(RenderParameters::min_size()),
-                        ty: wgpu::BufferBindingType::Uniform,
-                    },
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    count: None,
-                    ty: wgpu::BindingType::Buffer {
-                        has_dynamic_offset: false,
-                        min_binding_size: Some(BvhShaderNode::<Triangle>::min_size()),
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    },
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    count: None,
-                    ty: wgpu::BindingType::Buffer {
-                        has_dynamic_offset: false,
-                        min_binding_size: Some(Material::min_size()),
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    },
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                },
-            ],
-            label: Some("bind_group_0_layout"),
-        });
-
-        // create content for scene buffer
-        let mut scene_buf = StorageBuffer::new(Vec::<u8>::new());
-        scene_buf
-            .write(&sphere_scene())
-            .expect("failed to write contents to scene buffer");
-
-        // create and initialize scene buffer
-        let scene_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("scene_buffer"),
-            contents: &scene_buf.into_inner(),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        // create_content for param buffer
-        let mut param_uniform_storage_buffer = StorageBuffer::new(Vec::<u8>::new());
-        param_uniform_storage_buffer
-            .write(&RenderParameters::default())
-            .expect("failed to write render parameter content");
-
-        let param_uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("param_buffer"),
-            contents: &param_uniform_storage_buffer.into_inner(),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let mut triangle_storage_buffer = StorageBuffer::new(Vec::<u8>::new());
-
-        triangle_storage_buffer
-            .write(&bvh.0)
-            .expect("write triangles");
-
-        let triangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("triangle buffer"),
-            contents: &triangle_storage_buffer.into_inner(),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-
-        let mut material_buffer_data = StorageBuffer::new(Vec::<u8>::new());
-        material_buffer_data
-            .write(&scene.materials)
-            .expect("write materials");
-
-        let material_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("material_buffer"),
-            contents: &material_buffer_data.into_inner(),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: scene_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: param_uniform.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: triangle_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: material_buffer.as_entire_binding(),
-                },
-            ],
-            label: Some("bind_group_0"),
-            layout: &layout,
-        });
+        let resources = Resources::create(
+            &device,
+            size.width,
+            size.height,
+            bvh,
+            scene.materials,
+            RenderParameters::default(),
+        );
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&layout],
+                bind_group_layouts: &[&resources.render_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             fragment: Some(FragmentState {
                 entry_point: Some("fs_main"),
-                module: &shader,
+                module: &render_shader,
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
@@ -324,7 +210,7 @@ impl State {
                 buffers: &[],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 entry_point: Some("vs_main"),
-                module: &shader,
+                module: &render_shader,
             },
             label: Some("render pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -350,20 +236,32 @@ impl State {
             },
         });
 
+        let compute_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("compute layout"),
+                bind_group_layouts: &[&resources.compute_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("compute pipe"),
+            layout: Some(&compute_pipeline_layout),
+            module: &compute_shader,
+            entry_point: Some("main"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
+        });
+
         Ok(Self {
-            scene,
+            resources,
             surface,
             device,
             queue,
             config,
+            compute_pipeline,
+            render_pipeline,
             is_surface_configured: false,
             window,
-            pipeline,
-            fps: Fps::new(),
-            bind_group,
-            param_uniform,
-            params: RenderParameters::default(),
-            move_dir: None,
         })
     }
 
@@ -371,28 +269,16 @@ impl State {
         if width > 0 && height > 0 {
             self.config.width = width;
             self.config.height = height;
+            println!("configure surface {:?}", self.config);
             self.surface.configure(&self.device, &self.config);
             self.is_surface_configured = true;
-            self.params.img_h = height;
-            self.params.img_w = width;
+            self.resources.resize(&self.device, width, height);
         }
-    }
-
-    pub fn update(&mut self) {
-        self.fps.update();
-        if let Some(dir) = self.move_dir {
-            move_camera(&mut self.params, dir);
-        }
-        let mut data = StorageBuffer::new(Vec::new());
-        data.write(&self.params).expect("good ok yes");
-        self.queue
-            .write_buffer(&self.param_uniform, 0, &data.into_inner());
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
 
-        // We can't render unless the surface is configured
         if !self.is_surface_configured {
             return Ok(());
         }
@@ -408,6 +294,24 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute_pass"),
+                timestamp_writes: None,
+            });
+
+            compute_pass.set_pipeline(&self.compute_pipeline);
+            compute_pass.set_bind_group(0, Some(&self.resources.compute_bind_group), &[]);
+
+            let dims = self.resources.texture.size();
+            println!("texture size {:?}", dims);
+            let workgroup_size = 12;
+            compute_pass.dispatch_workgroups(
+                (dims.width + workgroup_size - 1) / workgroup_size,
+                (dims.height + workgroup_size - 1) / workgroup_size,
+                1,
+            );
+        }
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
@@ -429,8 +333,8 @@ impl State {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            render_pass.set_pipeline(&self.pipeline);
-            render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.resources.render_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 
@@ -440,12 +344,7 @@ impl State {
         Ok(())
     }
 
-    pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-        match (is_pressed, Direction::try_from(code).ok()) {
-            (true, Some(dir)) => self.move_dir = Some(dir),
-            (false, Some(_)) => self.move_dir = None,
-            _ => {}
-        }
+    pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, _is_pressed: bool) {
         if code == KeyCode::Escape {
             event_loop.exit();
         }

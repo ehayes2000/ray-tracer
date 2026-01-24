@@ -59,20 +59,17 @@ impl ApplicationHandler<State> for App {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
-            WindowEvent::RedrawRequested => {
-                state.update();
-                match state.render() {
-                    Ok(_) => {}
-                    // Reconfigure the surface if it's lost or outdated
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        let size = state.window.inner_size();
-                        state.resize(size.width, size.height);
-                    }
-                    Err(e) => {
-                        eprintln!("unable to render {}", e);
-                    }
+            WindowEvent::RedrawRequested => match state.render() {
+                Ok(_) => {}
+                // Reconfigure the surface if it's lost or outdated
+                Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                    let size = state.window.inner_size();
+                    state.resize(size.width, size.height);
                 }
-            }
+                Err(e) => {
+                    eprintln!("unable to render {}", e);
+                }
+            },
             WindowEvent::MouseInput { state, button, .. } => match (button, state.is_pressed()) {
                 (MouseButton::Left, true) => {}
                 (MouseButton::Left, false) => {}

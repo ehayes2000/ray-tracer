@@ -1,4 +1,3 @@
-use image::imageops::FilterType::CatmullRom;
 use std::sync::Arc;
 use wgpu::{Extent3d, PresentMode, TextureUsages, util::DeviceExt};
 use winit::{
