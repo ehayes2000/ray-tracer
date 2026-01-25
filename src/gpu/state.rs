@@ -1,15 +1,13 @@
-use super::bvh::{BvhShaderNode, build_shader_bvh};
+use super::bvh::build_shader_bvh;
 use super::mesh::Mesh;
 use super::scene::Scene;
-use encase::{ShaderType, StorageBuffer};
 use std::{iter, sync::Arc};
-use wgpu::{FragmentState, TextureUsages, VertexState};
+use wgpu::{FragmentState, VertexState};
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
 use super::types::{Material, RenderParameters, SceneBufferEntry, Sphere};
 use crate::gpu::resources::Resources;
-use crate::gpu::types::{MaterialKind, Triangle};
-use crate::math::cross;
+use crate::gpu::types::MaterialKind;
 use crate::v3;
 
 pub struct State {
@@ -192,7 +190,7 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&resources.render_bind_group_layout],
+                bind_group_layouts: &[&resources.texture_swap.render_layout],
                 push_constant_ranges: &[],
             });
 
@@ -240,7 +238,10 @@ impl State {
         let compute_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("compute layout"),
-                bind_group_layouts: &[&resources.compute_bind_group_layout],
+                bind_group_layouts: &[
+                    &resources.texture_bg_layout(),
+                    &resources.compute_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -290,6 +291,7 @@ impl State {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
+        let (texture_bg, render_bg) = self.resources.texture_swap.bind_group();
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -303,13 +305,13 @@ impl State {
             });
 
             compute_pass.set_pipeline(&self.compute_pipeline);
-            compute_pass.set_bind_group(0, Some(&self.resources.compute_bind_group), &[]);
+            compute_pass.set_bind_group(0, Some(texture_bg), &[]);
+            compute_pass.set_bind_group(1, Some(&self.resources.compute_bind_group), &[]);
 
-            let dims = self.resources.texture.size();
             let workgroup_size = 16;
             compute_pass.dispatch_workgroups(
-                (dims.width + workgroup_size - 1) / workgroup_size,
-                (dims.height + workgroup_size - 1) / workgroup_size,
+                (self.config.width + workgroup_size - 1) / workgroup_size,
+                (self.config.height + workgroup_size - 1) / workgroup_size,
                 1,
             );
         }
@@ -335,7 +337,7 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.resources.render_bind_group, &[]);
+            render_pass.set_bind_group(0, Some(render_bg), &[]);
             render_pass.draw(0..3, 0..1);
         }
         self.queue.write_buffer(

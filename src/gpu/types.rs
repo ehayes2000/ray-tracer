@@ -43,8 +43,6 @@ pub struct RenderParameters {
     pub samples_per_px: u32,
     pub vfov: f32,
     pub focal_len: f32,
-    pub img_w: u32,
-    pub img_h: u32,
     pub look_at: Vec3,
     pub look_from: Vec3,
 }
@@ -52,9 +50,7 @@ pub struct RenderParameters {
 impl Default for RenderParameters {
     fn default() -> Self {
         Self {
-            img_w: 128,
-            img_h: 128,
-            max_bounces: 5,
+            max_bounces: 100,
             samples_per_px: 5,
             focal_len: 1.0,
             look_at: v3!(0.0, 0.0, 0.0),

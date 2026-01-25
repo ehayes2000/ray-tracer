@@ -36,6 +36,11 @@ impl ApplicationHandler<State> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         #[allow(unused_mut)]
         let mut window_attributes = Window::default_attributes();
+        window_attributes.resizable = false;
+        window_attributes.inner_size = Some(winit::dpi::Size::Physical(winit::dpi::PhysicalSize {
+            width: 1920,
+            height: 1080,
+        }));
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
         self.state = Some(pollster::block_on(State::new(window)).unwrap());
     }

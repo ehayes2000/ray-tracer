@@ -1,6 +1,7 @@
-use std::num::NonZeroU64;
-
+mod texture_swap;
 use encase::StorageBuffer;
+use std::num::NonZeroU64;
+pub use texture_swap::TextureSwap;
 use wgpu::{BufferUsages, util::DeviceExt};
 
 use crate::gpu::{
@@ -11,15 +12,13 @@ use encase::ShaderType;
 use encase::internal::WriteInto;
 
 pub struct Resources {
-    pub texture: wgpu::Texture,
     bvh: wgpu::Buffer,
     params: wgpu::Buffer,
     materials: wgpu::Buffer,
     pub pass_count: wgpu::Buffer,
-    pub render_bind_group_layout: wgpu::BindGroupLayout,
-    pub render_bind_group: wgpu::BindGroup,
     pub compute_bind_group_layout: wgpu::BindGroupLayout,
     pub compute_bind_group: wgpu::BindGroup,
+    pub texture_swap: TextureSwap,
 }
 
 impl Resources {
@@ -31,7 +30,7 @@ impl Resources {
         materials: Vec<Material>,
         render_params: RenderParameters,
     ) -> Self {
-        let texture = Self::create_texture(device, width, height);
+        let swap = TextureSwap::new(device, width, height);
         let bvh = Self::create_buffer(device, &bvh_buff.0, "bvh_buf", BufferUsages::STORAGE);
         let materials = Self::create_buffer(device, &materials, "scene_buf", BufferUsages::STORAGE);
         let params =
@@ -42,78 +41,22 @@ impl Resources {
             "pass_count",
             BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
-        let (cbgl, cbg) = Self::create_compute_bind_group(
-            device,
-            &texture,
-            &bvh,
-            &materials,
-            &params,
-            &pass_count,
-        );
-        let (rbgl, rbg) = Self::create_render_bind_group(device, &texture);
+        let (cbgl, cbg) =
+            Self::create_compute_bind_group(device, &bvh, &materials, &params, &pass_count);
+
         Self {
             bvh,
             params,
             materials,
-            texture,
             pass_count,
+            texture_swap: swap,
             compute_bind_group: cbg,
             compute_bind_group_layout: cbgl,
-            render_bind_group: rbg,
-            render_bind_group_layout: rbgl,
         }
     }
 
-    fn create_render_bind_group(
-        device: &wgpu::Device,
-        texture: &wgpu::Texture,
-    ) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
-        let render_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        count: None,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        count: None,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                    },
-                ],
-                label: Some("render_bind_group_layout"),
-            });
-
-        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            ..Default::default()
-        });
-
-        let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("render_bind_group"),
-            layout: &render_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-        (render_bind_group_layout, render_bind_group)
+    pub fn texture_bg_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.texture_swap.layout
     }
 
     // 0 output texture
@@ -123,7 +66,6 @@ impl Resources {
     // 4 render params
     fn create_compute_bind_group(
         device: &wgpu::Device,
-        texture: &wgpu::Texture,
         bvh: &wgpu::Buffer,
         materials: &wgpu::Buffer,
         params: &wgpu::Buffer,
@@ -132,20 +74,9 @@ impl Resources {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("compute_bg_layout"),
             entries: &[
-                // output texture
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    count: None,
-                    ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: wgpu::TextureFormat::Rgba8Unorm,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                    },
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                },
                 // bvh buf
                 wgpu::BindGroupLayoutEntry {
-                    binding: 1,
+                    binding: 0,
                     count: None,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
@@ -156,7 +87,7 @@ impl Resources {
                 },
                 // materials
                 wgpu::BindGroupLayoutEntry {
-                    binding: 2,
+                    binding: 1,
                     count: None,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
@@ -167,7 +98,7 @@ impl Resources {
                 },
                 // render params
                 wgpu::BindGroupLayoutEntry {
-                    binding: 3,
+                    binding: 2,
                     count: None,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
@@ -177,7 +108,7 @@ impl Resources {
                     visibility: wgpu::ShaderStages::COMPUTE,
                 },
                 wgpu::BindGroupLayoutEntry {
-                    binding: 4,
+                    binding: 3,
                     count: None,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
@@ -188,17 +119,12 @@ impl Resources {
                 },
             ],
         });
-        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("compute_bg"),
             layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: bvh,
                         offset: 0,
@@ -206,7 +132,7 @@ impl Resources {
                     }),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 2,
+                    binding: 1,
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: materials,
                         offset: 0,
@@ -214,7 +140,7 @@ impl Resources {
                     }),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 3,
+                    binding: 2,
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: params,
                         offset: 0,
@@ -222,7 +148,7 @@ impl Resources {
                     }),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 4,
+                    binding: 3,
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: pass_count,
                         offset: 0,
@@ -232,23 +158,6 @@ impl Resources {
             ],
         });
         (bind_group_layout, bind_group)
-    }
-
-    fn create_texture(device: &wgpu::Device, width: u32, height: u32) -> wgpu::Texture {
-        device.create_texture(&wgpu::wgt::TextureDescriptor {
-            label: Some("texture"),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::STORAGE_BINDING,
-            view_formats: &[],
-        })
     }
 
     fn create_buffer<T>(
@@ -272,17 +181,6 @@ impl Resources {
     }
 
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
-        self.texture = Self::create_texture(device, width, height);
-        // TODO: this also creates a layout. probably bad
-        self.compute_bind_group = Self::create_compute_bind_group(
-            device,
-            &self.texture,
-            &self.bvh,
-            &self.materials,
-            &self.params,
-            &self.pass_count,
-        )
-        .1;
-        self.render_bind_group = Self::create_render_bind_group(device, &self.texture).1;
+        self.texture_swap.resize(device, width, height);
     }
 }

@@ -6,7 +6,6 @@ const LEAF = 1;
 const INTERIOR = 0;
 const WG_SIZE = 16;
 
-
 struct Bounds {
     p_min: vec3<f32>,
     p_max: vec3<f32>
@@ -40,8 +39,6 @@ struct Params {
     samples_per_px: u32,
     vfov: f32,
     focal_len: f32,
-    img_w: u32,
-    img_h: u32,
     look_at: vec3<f32>,
     look_from: vec3<f32>,
 }
@@ -574,11 +571,14 @@ fn ray_trace(r: Ray) -> vec3<f32> {
     return color;
 }
 
-@group(0) @binding(0) var output: texture_storage_2d<rgba8unorm, write>;
-@group(0) @binding(1) var<storage, read> triangles: array<BvhNode>;
-@group(0) @binding(2) var<storage, read> materials: array<Material>;
-@group(0) @binding(3) var<uniform> params: Params;
-@group(0) @binding(4) var<uniform> pass_count: u32;
+
+@group(0) @binding(0) var prev_frame: texture_2d<f32>;
+@group(0) @binding(1) var output: texture_storage_2d<rgba8unorm, write>;
+
+@group(1) @binding(0) var<storage, read> triangles: array<BvhNode>;
+@group(1) @binding(1) var<storage, read> materials: array<Material>;
+@group(1) @binding(2) var<uniform> params: Params;
+@group(1) @binding(3) var<uniform> pass_count: u32;
 
 
 @compute @workgroup_size(WG_SIZE, WG_SIZE)
@@ -596,5 +596,7 @@ fn main(
         color += ray_trace(ray);
     }
     color = color * 1.0 / f32(params.samples_per_px);
-    textureStore(output, px.xy, vec4f(color, 1.0));
+    let prev = textureLoad(prev_frame, px.xy, 0);
+    let rgba = (vec4f(color, 1.0) + (prev * f32(pass_count))) / f32(pass_count + 1);
+    textureStore(output, px.xy, rgba);
 }
