@@ -1,5 +1,7 @@
+use std::num::NonZeroU64;
+
 use encase::StorageBuffer;
-use wgpu::util::DeviceExt;
+use wgpu::{BufferUsages, util::DeviceExt};
 
 use crate::gpu::{
     bvh::{BvhShaderArray, BvhShaderNode},
@@ -13,6 +15,7 @@ pub struct Resources {
     bvh: wgpu::Buffer,
     params: wgpu::Buffer,
     materials: wgpu::Buffer,
+    pub pass_count: wgpu::Buffer,
     pub render_bind_group_layout: wgpu::BindGroupLayout,
     pub render_bind_group: wgpu::BindGroup,
     pub compute_bind_group_layout: wgpu::BindGroupLayout,
@@ -29,17 +32,31 @@ impl Resources {
         render_params: RenderParameters,
     ) -> Self {
         let texture = Self::create_texture(device, width, height);
-        let bvh = Self::create_buffer(device, &bvh_buff.0, "bvh_buf");
-        let materials = Self::create_buffer(device, &materials, "scene_buf");
-        let params = Self::create_buffer(device, &RenderParameters::default(), "scene_buf");
-        let (cbgl, cbg) =
-            Self::create_compute_bind_group(device, &texture, &bvh, &materials, &params);
+        let bvh = Self::create_buffer(device, &bvh_buff.0, "bvh_buf", BufferUsages::STORAGE);
+        let materials = Self::create_buffer(device, &materials, "scene_buf", BufferUsages::STORAGE);
+        let params =
+            Self::create_buffer(device, &render_params, "scene_buf", BufferUsages::UNIFORM);
+        let pass_count = Self::create_buffer(
+            device,
+            &[1u32],
+            "pass_count",
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let (cbgl, cbg) = Self::create_compute_bind_group(
+            device,
+            &texture,
+            &bvh,
+            &materials,
+            &params,
+            &pass_count,
+        );
         let (rbgl, rbg) = Self::create_render_bind_group(device, &texture);
         Self {
             bvh,
             params,
             materials,
             texture,
+            pass_count,
             compute_bind_group: cbg,
             compute_bind_group_layout: cbgl,
             render_bind_group: rbg,
@@ -110,6 +127,7 @@ impl Resources {
         bvh: &wgpu::Buffer,
         materials: &wgpu::Buffer,
         params: &wgpu::Buffer,
+        pass_count: &wgpu::Buffer,
     ) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("compute_bg_layout"),
@@ -158,6 +176,16 @@ impl Resources {
                     },
                     visibility: wgpu::ShaderStages::COMPUTE,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 4,
+                    count: None,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(4).expect("size")),
+                    },
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                },
             ],
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -193,6 +221,14 @@ impl Resources {
                         size: None,
                     }),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: pass_count,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
             ],
         });
         (bind_group_layout, bind_group)
@@ -215,7 +251,12 @@ impl Resources {
         })
     }
 
-    fn create_buffer<T>(device: &wgpu::Device, data: &T, name: &str) -> wgpu::Buffer
+    fn create_buffer<T>(
+        device: &wgpu::Device,
+        data: &T,
+        name: &str,
+        usage: BufferUsages,
+    ) -> wgpu::Buffer
     where
         T: ?Sized + ShaderType + WriteInto,
     {
@@ -226,9 +267,7 @@ impl Resources {
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(name),
             contents: &buf.into_inner(),
-            usage: wgpu::BufferUsages::UNIFORM
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::STORAGE,
+            usage,
         })
     }
 
@@ -241,6 +280,7 @@ impl Resources {
             &self.bvh,
             &self.materials,
             &self.params,
+            &self.pass_count,
         )
         .1;
         self.render_bind_group = Self::create_render_bind_group(device, &self.texture).1;

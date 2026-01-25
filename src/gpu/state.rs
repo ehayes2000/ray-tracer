@@ -22,6 +22,7 @@ pub struct State {
     pub is_surface_configured: bool,
     pub window: Arc<Window>,
     pub resources: Resources,
+    pub pass_count: u32,
 }
 
 fn sphere_scene() -> Vec<SceneBufferEntry> {
@@ -177,7 +178,7 @@ impl State {
         };
 
         let render_shader = device.create_shader_module(wgpu::include_wgsl!("render.wgsl"));
-        let compute_shader = device.create_shader_module(wgpu::include_wgsl!("compute.wgsl"));
+        let compute_shader = device.create_shader_module(wgpu::include_wgsl!("ray_tracer.wgsl"));
 
         let resources = Resources::create(
             &device,
@@ -262,6 +263,7 @@ impl State {
             render_pipeline,
             is_surface_configured: false,
             window,
+            pass_count: 1,
         })
     }
 
@@ -304,8 +306,7 @@ impl State {
             compute_pass.set_bind_group(0, Some(&self.resources.compute_bind_group), &[]);
 
             let dims = self.resources.texture.size();
-            println!("texture size {:?}", dims);
-            let workgroup_size = 12;
+            let workgroup_size = 16;
             compute_pass.dispatch_workgroups(
                 (dims.width + workgroup_size - 1) / workgroup_size,
                 (dims.height + workgroup_size - 1) / workgroup_size,
@@ -337,10 +338,14 @@ impl State {
             render_pass.set_bind_group(0, &self.resources.render_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
-
+        self.queue.write_buffer(
+            &self.resources.pass_count,
+            0,
+            bytemuck::cast_slice(&[self.pass_count]),
+        );
         self.queue.submit(iter::once(encoder.finish()));
         output.present();
-
+        self.pass_count += 1;
         Ok(())
     }
 
@@ -377,25 +382,6 @@ impl TryFrom<KeyCode> for Direction {
 }
 
 // this obviously needs to be normalized for time but idc atm
-fn move_camera(params: &mut RenderParameters, direction: Direction) {
-    let epsilon = 0.5;
-    let look_vector = params.look_from - params.look_at;
-    let fb = v3!(look_vector.0, 0.0, look_vector.2).normalize();
-    // left right is orthogonal to where looking and parallel to ground
-    let lr = cross(v3!(0.0, 1.0, 0.0), fb);
-    // forward backwards  is orthogonal to left right and and parallel to ground
-    let translate = match direction {
-        Direction::Backward => fb * epsilon,
-        Direction::Forward => fb * epsilon * -1.0,
-        Direction::Up => v3!(0., 1., 0.) * epsilon,
-        Direction::Down => v3!(0., -1., 0.) * epsilon,
-        Direction::Left => lr * epsilon * -1.0,
-        Direction::Right => lr * epsilon,
-    };
-    params.look_from += translate;
-    params.look_at += translate;
-}
-
 fn mesh_scene() -> Scene {
     let ground = Material {
         kind: MaterialKind::LAMBERTIAN,

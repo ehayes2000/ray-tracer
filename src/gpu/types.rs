@@ -55,7 +55,7 @@ impl Default for RenderParameters {
             img_w: 128,
             img_h: 128,
             max_bounces: 5,
-            samples_per_px: 50,
+            samples_per_px: 5,
             focal_len: 1.0,
             look_at: v3!(0.0, 0.0, 0.0),
             look_from: v3!(5., 2., 0.),

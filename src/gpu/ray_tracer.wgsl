@@ -4,6 +4,7 @@ const EPSILON = 1e-8;
 const VUP = vec3f(0.0, 1.0, 0.0);
 const LEAF = 1;
 const INTERIOR = 0;
+const WG_SIZE = 16;
 
 
 struct Bounds {
@@ -95,17 +96,19 @@ struct Sphere {
     material: Material,
 }
 
+
 fn image_plane() -> ImagePlane {
+    let dims = textureDimensions(output);
     let W = normalize(params.look_from - params.look_at);
     let U = normalize(cross(VUP, W));
     let V = cross(W, U);
     let H = tan(radians(params.vfov / 2.0));
     let VIEW_HEIGHT = 2.0 * H * params.focal_len;
-    let VIEW_WIDTH = VIEW_HEIGHT * f32(params.img_w) / f32(params.img_h);
+    let VIEW_WIDTH = VIEW_HEIGHT * f32(dims.x) / f32(dims.y);
     let VIEW_U = VIEW_WIDTH * U;
     let VIEW_V = VIEW_HEIGHT * -V;
-    let PX_DELTA_U = VIEW_U / f32(params.img_w);
-    let PX_DELTA_V = VIEW_V / f32(params.img_h);
+    let PX_DELTA_U = VIEW_U / f32(dims.x);
+    let PX_DELTA_V = VIEW_V / f32(dims.y);
     let VIEW_UP_LEFT = params.look_from - (params.focal_len * W) - (VIEW_U / 2.0) - (VIEW_V / 2.0);
     let PX_00_LOC = VIEW_UP_LEFT + 0.5 * (PX_DELTA_U + PX_DELTA_V);
     return ImagePlane(
@@ -571,36 +574,27 @@ fn ray_trace(r: Ray) -> vec3<f32> {
     return color;
 }
 
-@group(0) @binding(0) var<uniform> params: Params
+@group(0) @binding(0) var output: texture_storage_2d<rgba8unorm, write>;
 @group(0) @binding(1) var<storage, read> triangles: array<BvhNode>;
 @group(0) @binding(2) var<storage, read> materials: array<Material>;
+@group(0) @binding(3) var<uniform> params: Params;
+@group(0) @binding(4) var<uniform> pass_count: u32;
 
-@vertex
-fn vs_main(
-    @builtin(vertex_index) in_vertex_index: u32,
-) -> @builtin(position) vec4<f32> {
-    if (in_vertex_index == 0u) {
-        return vec4<f32>(-1.0, -1.0, 0.0, 1.0);
-    } else if (in_vertex_index == 1u) {
-        return vec4<f32>(3.0, -1.0, 0.0, 1.0);
-    } else {
-        return vec4<f32>(-1.0, 3.0, 0.0, 1.0);
-    }
-}
 
-@fragment
-fn fs_main(
-    @builtin(position) px: vec4<f32>
-) -> @location(0) vec4<f32> {
-    seed = u32(ceil(px.x * px.y) + 1);
+@compute @workgroup_size(WG_SIZE, WG_SIZE)
+fn main(
+  @builtin(global_invocation_id) px: vec3<u32>,
+) {
+    seed = px.x * px.y + pass_count;
+    // TODO read from prev
     var color = vec_zero();
     for (var i = 0; i < i32(params.samples_per_px); i ++) {
         var offset = vec2f(rand(), rand());
         offset.x -= 0.5;
         offset.y -= 0.5;
-        let ray = ray_cast(px.xy, offset);
+        let ray = ray_cast(vec2<f32>(px.xy), offset);
         color += ray_trace(ray);
     }
     color = color * 1.0 / f32(params.samples_per_px);
-    return vec4f(color.x, color.y, color.z, 0.0);
+    textureStore(output, px.xy, vec4f(color, 1.0));
 }
