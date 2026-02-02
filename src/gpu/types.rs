@@ -50,8 +50,8 @@ pub struct RenderParameters {
 impl Default for RenderParameters {
     fn default() -> Self {
         Self {
-            max_bounces: 100,
-            samples_per_px: 5,
+            max_bounces: 300,
+            samples_per_px: 1,
             focal_len: 1.0,
             look_at: v3!(0.0, 0.0, 0.0),
             look_from: v3!(5., 2., 0.),

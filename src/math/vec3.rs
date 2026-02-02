@@ -447,3 +447,15 @@ mod index_test {
         assert_eq!(v.1, 2.0);
     }
 }
+
+impl std::ops::Index<usize> for Vec3 {
+    type Output = f32;
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.0,
+            1 => &self.1,
+            2 => &self.2,
+            _ => panic!("index out of bounds"),
+        }
+    }
+}

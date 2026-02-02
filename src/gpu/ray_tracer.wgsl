@@ -199,8 +199,6 @@ fn material_scatter_dielectric(
     ray: Ray,
     hit: HitRecord
 ) -> Scatter {
-    var scatter = scatter_zero();
-    let attenuation = obj.color;
     let unit_direction = normalize(ray.direction);
     var ri: f32;
     if (hit.front_face) {
@@ -216,9 +214,11 @@ fn material_scatter_dielectric(
     } else {
         direction = refract(unit_direction, hit.normal, ri);
     }
+
+    var scatter = scatter_zero();
     scatter.scatter = true;
     scatter.ray = Ray(hit.point, direction);
-    scatter.color = attenuation;
+    scatter.color = vec_one();
     return scatter;
 }
 
@@ -385,9 +385,10 @@ fn tri_moller_trumbore_intersection(
         return hit_zero();
     }
 
-    let normal = normalize(cross(e1, e2));
-    // let front_face = dot(r.direction, normal) < 0.0;
-    let front_face = true;
+    let orth = cross(e1,e2);
+    let normal = normalize(orth);
+    let front_face = dot(r.direction, normal) > 0.0;
+
     let t = inv_det * dot(e2, s_cross_e1);
 
     if (t > EPSILON) {
@@ -495,7 +496,7 @@ fn world_hit_bvh(ray: Ray) -> HitRecord {
         let node = &triangles[current_node_i];
         if (bounds_intersect(node.bounds, interval, ray, inv_dir, is_neg)){
             if (node.kind == LEAF) {
-                let leaf_hit = tri_moller_trumbore_intersection(current_node_i, ray);
+                let leaf_hit = tri_hit(current_node_i, ray, interval);
                 if (leaf_hit.hit && leaf_hit.t < interval.max){
                     hit = leaf_hit;
                     interval.max = hit.t;
@@ -552,6 +553,7 @@ fn ray_trace(r: Ray) -> vec3<f32> {
     while(bounces < i32(params.max_bounces)) {
         bounces ++;
         let hit = world_hit_bvh(ray);
+        // let hit = world_hit(ray);
         if (hit.hit) {
             let scatter = material_scatter(hit.material, ray, hit);
             ray = scatter.ray;
@@ -564,8 +566,7 @@ fn ray_trace(r: Ray) -> vec3<f32> {
             }
         // nothing hit
         } else {
-            color = color * sky_color(ray);
-            return color;
+            return color * sky_color(ray);
         }
     }
     return color;
@@ -579,13 +580,16 @@ fn ray_trace(r: Ray) -> vec3<f32> {
 @group(1) @binding(1) var<storage, read> materials: array<Material>;
 @group(1) @binding(2) var<uniform> params: Params;
 @group(1) @binding(3) var<uniform> pass_count: u32;
+@group(1) @binding(4) var<storage, read> seeds: array<u32>;
 
 
 @compute @workgroup_size(WG_SIZE, WG_SIZE)
 fn main(
   @builtin(global_invocation_id) px: vec3<u32>,
 ) {
-    seed = px.x * px.y + pass_count;
+    // TODO don't hard code
+    let i = px.y * 1920 + px.x;
+    seed = seeds[i] * pass_count;
     // TODO read from prev
     var color = vec_zero();
     for (var i = 0; i < i32(params.samples_per_px); i ++) {
@@ -595,7 +599,7 @@ fn main(
         let ray = ray_cast(vec2<f32>(px.xy), offset);
         color += ray_trace(ray);
     }
-    color = color * 1.0 / f32(params.samples_per_px);
+    color = color / f32(params.samples_per_px);
     let prev = textureLoad(prev_frame, px.xy, 0);
     let rgba = (vec4f(color, 1.0) + (prev * f32(pass_count))) / f32(pass_count + 1);
     textureStore(output, px.xy, rgba);

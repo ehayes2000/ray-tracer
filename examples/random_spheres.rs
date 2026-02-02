@@ -1,10 +1,10 @@
 use ray_tracer::{
     ball,
+    bvh::BvhNode,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
     material::{Dielectric, Lambertian, Metal},
-    math::Vec3,
-    math::{random, random_f32},
+    math::{Vec3, random, random_f32},
     sphere::Sphere,
     v3,
 };
@@ -48,8 +48,9 @@ fn main() {
     let render_params = RenderParameters {
         aspect_ratio: 16. / 9.,
         image_width: 1200.,
-        samples_per_pixel: 500.,
-        max_bounces: 50.,
+        samples_per_pixel: 20.,
+        max_bounces: 15.,
+        background_color: v3!(0, 0, 0),
     };
     let camera_params = CameraParameters {
         vfov: 20.,
@@ -65,5 +66,7 @@ fn main() {
         .write(true)
         .open("random_spheres.ppm")
         .expect("random_spheres.ppm");
-    camera.render(&mut output_file, &world);
+
+    let bvh = BvhNode::from_objects(world.take_objects());
+    camera.render(&mut output_file, bvh);
 }

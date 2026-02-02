@@ -1,11 +1,15 @@
+use crate::aabb::Aabb;
+use crate::bvh::BvhNode;
 use crate::interval::Interval;
 use crate::material::Material;
 use crate::math::Ray;
 use crate::math::{Point, Vec3, dot};
+use std::fmt::Debug;
 use std::rc::Rc;
 
 pub trait Hit {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord>;
+    fn bounding_box(&self) -> &Aabb;
 }
 
 #[derive(Clone)]
@@ -15,6 +19,17 @@ pub struct HitRecord {
     pub normal: Vec3,
     pub front_face: bool,
     pub material: Rc<dyn Material>,
+}
+
+impl Debug for HitRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HitRecord")
+            .field("p", &self.p)
+            .field("t", &self.t)
+            .field("normal", &self.normal)
+            .field("front_face", &self.front_face)
+            .finish()
+    }
 }
 
 impl HitRecord {
@@ -39,19 +54,37 @@ impl HitRecord {
 
 #[derive(Default)]
 pub struct HittableList {
-    pub objects: Vec<Box<dyn Hit>>,
+    objects: Vec<Rc<dyn Hit>>,
+    bbox: Aabb,
+}
+
+impl Debug for HittableList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HittableList")
+            .field("bbox", &self.bbox)
+            .field("objects", &format!("[{} objects]", self.objects.len()))
+            .finish()
+    }
 }
 
 impl HittableList {
     pub fn new() -> Self {
-        Self { objects: vec![] }
+        Self {
+            objects: vec![],
+            bbox: Aabb::empty(),
+        }
     }
     pub fn clear(&mut self) {
         self.objects.clear();
     }
 
-    pub fn add(&mut self, object: Box<dyn Hit>) {
+    pub fn add(&mut self, object: Rc<dyn Hit>) {
+        self.bbox = self.bbox.clone().union(object.bounding_box());
         self.objects.push(object)
+    }
+
+    pub fn into_bvh(self) -> BvhNode {
+        BvhNode::from_objects(self.objects)
     }
 }
 
@@ -69,5 +102,9 @@ where
             }
         }
         any_hit
+    }
+
+    fn bounding_box(&self) -> &Aabb {
+        &self.bbox
     }
 }

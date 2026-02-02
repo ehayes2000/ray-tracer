@@ -15,7 +15,7 @@ fn main() {
     let mut world = HittableList::new();
     let mesh = mesh!("dk.obj", metal).expect("load mesh");
     world.add(Sphere::obj(Vec3(0., -10000., -1.), 10000., ground));
-    world.add(mesh);
+    world.add(mesh.into());
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {

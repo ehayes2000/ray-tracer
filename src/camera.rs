@@ -40,6 +40,7 @@ pub struct RenderParameters {
     pub aspect_ratio: f32,
     pub samples_per_pixel: f32,
     pub max_bounces: f32,
+    pub background_color: Color,
 }
 
 impl Default for RenderParameters {
@@ -49,6 +50,7 @@ impl Default for RenderParameters {
             aspect_ratio: 16.0 / 9.0,
             max_bounces: 20.,
             samples_per_pixel: 100.,
+            background_color: v3!(0, 0, 0),
         }
     }
 }
@@ -130,7 +132,7 @@ impl Camera {
                 let mut color = Vec3::zero();
                 for _ in 0..self.r_params.samples_per_pixel as i64 {
                     let r = self.get_ray(i as f32, j as f32);
-                    color += Self::ray_color(&r, &world, self.r_params.max_bounces as u32);
+                    color += self.ray_color(&r, &world, self.r_params.max_bounces as u32);
                 }
                 write_color(&mut f, &(color * self.pixel_samples_scale)).expect("io error");
             }
@@ -138,7 +140,7 @@ impl Camera {
         eprintln!();
     }
 
-    pub fn ray_color<T>(r: &Ray, world: &T, remaining_bounces: u32) -> Color
+    pub fn ray_color<T>(&self, r: &Ray, world: &T, remaining_bounces: u32) -> Color
     where
         T: Hit,
     {
@@ -151,14 +153,13 @@ impl Camera {
             // something reflected ray
             if let Some(scatter) = hit.material.scatter(r, &hit) {
                 scatter.color_attenuation
-                    * Self::ray_color(&scatter.ray, world, remaining_bounces - 1)
+                    * self.ray_color(&scatter.ray, world, remaining_bounces - 1)
+                    + hit.material.emit(hit.p)
             } else {
-                Color::zero()
+                Color::zero() + hit.material.emit(hit.p)
             }
         } else {
-            let unit_direction = unit_vector(&r.direction);
-            let a = 0.5 * (unit_direction.1 + 1.0);
-            (1.0 - a) * Color::one() + (a * Vec3(0.5, 0.7, 1.0))
+            self.r_params.background_color
         }
     }
 

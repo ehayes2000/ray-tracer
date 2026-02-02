@@ -394,7 +394,7 @@ fn mesh_scene() -> Scene {
 
     let glass = Material {
         kind: MaterialKind::DIELECTRIC,
-        color: v3!(0.1, 0.2, 0.5),
+        color: v3!(1.0, 1.0, 1.0),
         refractive_index: 1.5,
         roughness: 0.,
     };
@@ -415,7 +415,7 @@ fn mesh_scene() -> Scene {
 
     let cube = Mesh::from_file("models/cube.obj").expect("cube");
     let cube2 = cube.clone().translate(v3!(0, 0.0, 3.0));
-    let cube3 = cube.clone().translate(v3!(-3., 0.0, 1.0));
+    let cube3 = cube.clone().translate(v3!(-2., 0.0, 1.0));
     let plane = Mesh::from_file("models/plane.obj")
         .expect("plane")
         .translate(v3!(0, -1.01, 0));
@@ -429,14 +429,18 @@ fn mesh_scene() -> Scene {
     // let bubble = Dielectric::obj(1.0 / 1.5);
     // let center = Lambertian::obj(Vec3(0.1, 0.2, 0.5));
     // let right = Metal::obj(Vec3(0.8, 0.6, 0.2), 1.0);
+    //
+
+    let sphere = Mesh::from_file("models/big-sphere.obj").expect("sphere");
 
     Scene::new()
-        .with_mesh(dk, 2)
-        .with_mesh(cube2, 1)
+        // .with_mesh(dk, 2)
+        // .with_mesh(cube2, 1)
         .with_mesh(plane, 0)
-        .with_mesh(cube3, 3)
+        .with_mesh(cube3, 2)
+        .with_mesh(sphere, 1)
         .with_material(ground)
         .with_material(glass)
-        .with_material(bluish)
+        // .with_material(bluish)
         .with_material(metal)
 }

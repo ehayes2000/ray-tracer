@@ -28,7 +28,6 @@ impl Dielectric {
 
 impl Material for Dielectric {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<Scatter> {
-        let attenuation = Vec3(1.0, 1.0, 1.0);
         let unit_direction = unit_vector(&r_in.direction);
         let ri = if rec.front_face {
             1.0 / self.refraction_index
@@ -44,7 +43,7 @@ impl Material for Dielectric {
         };
 
         Some(Scatter {
-            color_attenuation: attenuation,
+            color_attenuation: Vec3(1.0, 1.0, 1.0),
             ray: Ray {
                 direction,
                 origin: rec.p,

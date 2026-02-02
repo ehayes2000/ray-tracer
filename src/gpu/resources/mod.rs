@@ -1,5 +1,6 @@
 mod texture_swap;
 use encase::StorageBuffer;
+use rand::random;
 use std::num::NonZeroU64;
 pub use texture_swap::TextureSwap;
 use wgpu::{BufferUsages, util::DeviceExt};
@@ -15,6 +16,7 @@ pub struct Resources {
     bvh: wgpu::Buffer,
     params: wgpu::Buffer,
     materials: wgpu::Buffer,
+    seed: wgpu::Buffer,
     pub pass_count: wgpu::Buffer,
     pub compute_bind_group_layout: wgpu::BindGroupLayout,
     pub compute_bind_group: wgpu::BindGroup,
@@ -41,14 +43,21 @@ impl Resources {
             "pass_count",
             BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
+
+        let seed_data = vec![0; (width * height) as _]
+            .into_iter()
+            .map(|_| random())
+            .collect::<Vec<u32>>();
+        let seed = Self::create_buffer(device, &seed_data, "seed", BufferUsages::STORAGE);
         let (cbgl, cbg) =
-            Self::create_compute_bind_group(device, &bvh, &materials, &params, &pass_count);
+            Self::create_compute_bind_group(device, &bvh, &materials, &params, &pass_count, &seed);
 
         Self {
             bvh,
             params,
             materials,
             pass_count,
+            seed,
             texture_swap: swap,
             compute_bind_group: cbg,
             compute_bind_group_layout: cbgl,
@@ -70,6 +79,7 @@ impl Resources {
         materials: &wgpu::Buffer,
         params: &wgpu::Buffer,
         pass_count: &wgpu::Buffer,
+        seed: &wgpu::Buffer,
     ) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("compute_bg_layout"),
@@ -117,6 +127,16 @@ impl Resources {
                     },
                     visibility: wgpu::ShaderStages::COMPUTE,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 4,
+                    count: None,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(seed.size()).expect("size")),
+                    },
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                },
             ],
         });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -151,6 +171,14 @@ impl Resources {
                     binding: 3,
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: pass_count,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: seed,
                         offset: 0,
                         size: None,
                     }),

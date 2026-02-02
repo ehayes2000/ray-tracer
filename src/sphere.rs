@@ -1,25 +1,30 @@
 use super::hittable::{Hit, HitRecord};
 use super::interval::Interval;
 use super::material::Material;
-use super::math::Ray;
-use super::math::{Point, dot};
+use super::math::{Point, Ray, Vec3, dot};
+use crate::aabb::Aabb;
 use std::rc::Rc;
+
 pub struct Sphere {
     pub center: Point,
     pub radius: f32,
     pub material: Rc<dyn Material>,
+    pub bbox: Aabb,
 }
 
 impl Sphere {
     pub fn new(center: Point, radius: f32, material: Rc<dyn Material>) -> Self {
+        let rvec = Vec3(radius, radius, radius);
+        let bbox = Aabb::from_corners(center - rvec, center + rvec);
         Self {
             center,
             radius,
             material,
+            bbox,
         }
     }
-    pub fn obj(center: Point, radius: f32, material: Rc<dyn Material>) -> Box<dyn Hit> {
-        Box::new(Self::new(center, radius, material))
+    pub fn obj(center: Point, radius: f32, material: Rc<dyn Material>) -> Rc<dyn Hit> {
+        Rc::new(Self::new(center, radius, material))
     }
 }
 
@@ -59,6 +64,10 @@ impl Hit for Sphere {
                 let normal = (p - self.center) / self.radius;
                 HitRecord::with_normal(p, r, normal, root, Rc::clone(&self.material))
             })
+    }
+
+    fn bounding_box(&self) -> &Aabb {
+        &self.bbox
     }
 }
 

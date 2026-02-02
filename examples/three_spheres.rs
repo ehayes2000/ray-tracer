@@ -1,4 +1,5 @@
 use ray_tracer::{
+    bvh::BvhNode,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
     material::{Dielectric, Lambertian, Metal},
@@ -21,6 +22,7 @@ fn main() {
     world.add(Sphere::obj(Vec3(-1.0, 0., -1.), 0.5, left));
     world.add(Sphere::obj(Vec3(-1.0, 0., -1.), 0.4, bubble));
     world.add(Sphere::obj(Vec3(0., -100.5, -1.), 100., ground));
+    let bvh = BvhNode::from_objects(world.take_objects());
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {
@@ -32,10 +34,11 @@ fn main() {
         ..Default::default()
     };
     let cam = Camera::new(cparams, rparams);
-    let mut output_file = std::fs::OpenOptions::new()
+    let output_file = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
         .open("three_spheres.ppm")
         .expect("three_spheres.ppm");
-    cam.render(&mut output_file, &world);
+    let mut writer = std::io::BufWriter::new(output_file);
+    cam.render(&mut writer, bvh);
 }
