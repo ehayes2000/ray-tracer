@@ -5,7 +5,6 @@ pub mod color;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 pub mod hittable;
-pub mod interval;
 pub mod material;
 pub mod math;
 pub mod mesh;

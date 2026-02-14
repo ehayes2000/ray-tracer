@@ -9,9 +9,8 @@ use std::{fs::File, io::BufReader};
 use crate::Float;
 use crate::aabb::Aabb;
 use crate::hittable::{Hit, HitRecord};
-use crate::interval::Interval;
 use crate::material::Material;
-use crate::math::{Point, Ray, Vec3, cross, dot};
+use crate::math::{Interval, Point, Ray, Vec3, cross, dot};
 
 // counter-clockwise winding front
 pub struct Triangle {

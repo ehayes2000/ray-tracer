@@ -25,7 +25,7 @@ fn main() {
             v3!(555, 0, 0),
             v3!(0, 555, 0),
             v3!(0, 0, 555),
-            mirror.clone(),
+            green.clone(),
         )
         .obj(),
     );
@@ -42,7 +42,7 @@ fn main() {
         .obj(),
     );
     // left wall
-    world.add(Mesh::quad(v3!(0, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), mirror.clone()).obj());
+    world.add(Mesh::quad(v3!(0, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), red.clone()).obj());
     // roof
     world.add(
         Mesh::quad(
@@ -56,18 +56,9 @@ fn main() {
     // floor
     world.add(Mesh::quad(v3!(0, 0, 0), v3!(555, 0, 0), v3!(0, 0, 555), white.clone()).obj());
 
-    world.add(
-        Mesh::quad(
-            v3!(100, 0, 112.5),
-            v3!(0, 195, 0),
-            v3!(195, 0, 0),
-            blue.clone(),
-        )
-        .obj(),
-    );
-    world.add(Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), red.clone()).obj());
+    world.add(Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone()).obj());
 
-    world.add(Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), green.clone()).obj());
+    world.add(Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone()).obj());
 
     let camera = Camera::new(
         CameraParameters {
@@ -81,7 +72,7 @@ fn main() {
             image_width: 600.,
             aspect_ratio: 1.0,
             max_bounces: 50.,
-            samples_per_pixel: 14. * 16.,
+            samples_per_pixel: 14. * 50.,
             background_color: v3!(0, 0, 0),
         },
     );
@@ -93,6 +84,5 @@ fn main() {
         .expect("cornell.ppm");
 
     let writer = BufWriter::new(file);
-    // world.into_bvh().log_bboxes();
-    camera.render_multi(14, writer, Arc::new(world));
+    camera.render_multi(14, writer, Arc::new(world.into_bvh()));
 }

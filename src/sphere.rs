@@ -1,6 +1,6 @@
 use super::hittable::{Hit, HitRecord};
-use super::interval::Interval;
 use super::material::Material;
+use super::math::Interval;
 use super::math::{Point, Ray, Vec3, dot};
 use crate::Float;
 use crate::aabb::Aabb;

@@ -1,8 +1,8 @@
 use crate::Float;
 use crate::aabb::Aabb;
 use crate::bvh::BvhNode;
-use crate::interval::Interval;
 use crate::material::Material;
+use crate::math::Interval;
 use crate::math::Ray;
 use crate::math::{Point, Vec3, dot};
 use std::fmt::Debug;

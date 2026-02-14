@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::Float;
 use crate::color::to_8bit;
 use crate::hittable::Hit;
-use crate::interval::Interval;
+use crate::math::Interval;
 use crate::math::Ray;
 use crate::math::degrees_to_radians;
 use crate::math::random;

@@ -1,10 +1,9 @@
 use ray_tracer::{
-    ball,
-    bvh::BvhNode,
+    Float, ball,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
     material::{Dielectric, Lambertian, Metal},
-    math::{Vec3, random, random_f32},
+    math::{Vec3, random, random_float},
     sphere::Sphere,
     v3,
 };
@@ -14,9 +13,9 @@ fn main() {
     let ground_m = Lambertian::obj(v3!(0.5, 0.5, 0.5));
     world.add(ball!(v3!(0, -1000, 0), 1000., ground_m));
     for a in -11..11 {
-        let a = a as f32;
+        let a = a as Float;
         for b in -11..11 {
-            let b = b as f32;
+            let b = b as Float;
             let mat = random();
             let center = v3!(a + 0.9 * random(), 0.2, b + 0.9 * random());
             if (center - v3!(4, 0.2, 0)).len() > 0.9 {
@@ -25,7 +24,7 @@ fn main() {
                     Lambertian::obj(color)
                 } else if mat < 0.95 {
                     let color = Vec3::random_mm(0.5, 1.0);
-                    let fuzz = random_f32(0., 0.5);
+                    let fuzz = random_float(0., 0.5);
                     Metal::obj(color, fuzz)
                 } else {
                     Dielectric::obj(1.5)

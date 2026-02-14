@@ -1,5 +1,5 @@
 use ray_tracer::{
-    ball,
+    Float, ball,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
     material::Lambertian,
@@ -8,7 +8,7 @@ use ray_tracer::{
 };
 
 fn main() {
-    let r = Float::cos(std::Float::consts::PI / 4.0);
+    let r = Float::cos((std::f64::consts::PI / 4.0) as Float);
     let mat_l = Lambertian::obj(v3!(0, 0, 1));
     let mat_r = Lambertian::obj(v3!(1, 0, 0));
     let mut world = HittableList::new();

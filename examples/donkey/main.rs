@@ -1,7 +1,7 @@
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
-    material::{Dielectric, Lambertian, Metal},
+    material::{Lambertian, Metal},
     math::Vec3,
     mesh,
     sphere::Sphere,
@@ -32,5 +32,5 @@ fn main() {
         .write(true)
         .open("donkey.ppm")
         .expect("donkey.ppm");
-    cam.render(&mut output_file, &world);
+    cam.render(&mut output_file, world);
 }

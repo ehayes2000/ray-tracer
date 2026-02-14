@@ -2,8 +2,7 @@
 
 use crate::{
     EPSILON,
-    interval::Interval,
-    math::{Point, Ray, Vec3},
+    math::{Axis, Interval, Point, Ray, Vec3},
 };
 
 #[derive(Clone, Debug)]
@@ -78,22 +77,13 @@ impl Aabb {
         self
     }
 
-    pub fn axis(&self, a: usize) -> &Interval {
-        match a {
-            0 => &self.x,
-            1 => &self.y,
-            2 => &self.z,
-            _ => panic!("axis out of bounds"),
-        }
-    }
-
     pub fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<Interval> {
         let mut hit_t = ray_t.to_owned();
-        for axis in 0..3 {
-            let ax = self.axis(axis);
+        for axis in Axis::iter() {
+            let interval = &self[axis];
             let adinv = 1.0 / r.direction[axis];
-            let t0 = (ax.min - r.origin[axis]) * adinv;
-            let t1 = (ax.max - r.origin[axis]) * adinv;
+            let t0 = (interval.min - r.origin[axis]) * adinv;
+            let t1 = (interval.max - r.origin[axis]) * adinv;
 
             if t0 < t1 {
                 if t0 > hit_t.min {
@@ -124,11 +114,48 @@ impl Aabb {
             self.z.max.midpoint(self.z.min),
         )
     }
+
+    pub fn longest(&self) -> Axis {
+        if self.x.size() > self.y.size() {
+            if self.x.size() > self.z.size() {
+                Axis::X
+            } else {
+                Axis::Z
+            }
+        } else {
+            if self.y.size() > self.z.size() {
+                Axis::Y
+            } else {
+                Axis::Z
+            }
+        }
+    }
 }
 
 impl Default for Aabb {
     fn default() -> Self {
         Self::empty()
+    }
+}
+
+impl std::ops::Index<Axis> for Aabb {
+    type Output = Interval;
+    fn index(&self, index: Axis) -> &Self::Output {
+        match index {
+            Axis::X => &self.x,
+            Axis::Y => &self.y,
+            Axis::Z => &self.z,
+        }
+    }
+}
+
+impl std::ops::IndexMut<Axis> for Aabb {
+    fn index_mut(&mut self, index: Axis) -> &mut Self::Output {
+        match index {
+            Axis::X => &mut self.x,
+            Axis::Y => &mut self.y,
+            Axis::Z => &mut self.z,
+        }
     }
 }
 

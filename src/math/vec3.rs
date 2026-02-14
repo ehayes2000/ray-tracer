@@ -1,3 +1,4 @@
+use super::Axis;
 use crate::Float;
 #[cfg(feature = "gpu")]
 use encase::impl_vector;
@@ -462,6 +463,27 @@ impl std::ops::Index<usize> for Vec3 {
             1 => &self.1,
             2 => &self.2,
             _ => panic!("index out of bounds"),
+        }
+    }
+}
+
+impl std::ops::Index<Axis> for Vec3 {
+    type Output = Float;
+    fn index(&self, index: Axis) -> &Self::Output {
+        match index {
+            Axis::X => &self.0,
+            Axis::Y => &self.1,
+            Axis::Z => &self.2,
+        }
+    }
+}
+
+impl std::ops::IndexMut<Axis> for Vec3 {
+    fn index_mut(&mut self, index: Axis) -> &mut Self::Output {
+        match index {
+            Axis::X => &mut self.0,
+            Axis::Y => &mut self.1,
+            Axis::Z => &mut self.2,
         }
     }
 }

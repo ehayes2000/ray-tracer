@@ -59,4 +59,8 @@ impl Interval {
         self.max = self.max.max(other.max);
         self
     }
+
+    pub fn center(&self) -> Float {
+        self.min + (self.size() / 2.0)
+    }
 }
