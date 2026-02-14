@@ -1,7 +1,9 @@
 use std::default::Default;
 use std::io::Write;
+use std::sync::Arc;
 
-use crate::color::write_color;
+use crate::Float;
+use crate::color::to_8bit;
 use crate::hittable::Hit;
 use crate::interval::Interval;
 use crate::math::Ray;
@@ -15,10 +17,10 @@ use crate::v3;
 pub struct CameraParameters {
     pub look_at: Point,
     pub look_from: Point,
-    pub vfov: f32,
-    // pub focal_length: f32,
-    pub focus_distance: f32,
-    pub defocus_angle: f32,
+    pub vfov: Float,
+    // pub focal_length: Float,
+    pub focus_distance: Float,
+    pub defocus_angle: Float,
 }
 
 impl Default for CameraParameters {
@@ -36,10 +38,10 @@ impl Default for CameraParameters {
 
 #[derive(Debug, Clone)]
 pub struct RenderParameters {
-    pub image_width: f32,
-    pub aspect_ratio: f32,
-    pub samples_per_pixel: f32,
-    pub max_bounces: f32,
+    pub image_width: Float,
+    pub aspect_ratio: Float,
+    pub samples_per_pixel: Float,
+    pub max_bounces: Float,
     pub background_color: Color,
 }
 
@@ -64,15 +66,15 @@ pub struct Camera {
     pub defocus_disk_v: Vec3,
     pub pixel_delta_u: Vec3,
     pub pixel_delta_v: Vec3,
-    pub pixel_samples_scale: f32,
-    pub image_height: f32,
+    pub pixel_samples_scale: Float,
+    pub image_height: Float,
 }
 
 impl Camera {
     pub fn new(c_params: CameraParameters, r_params: RenderParameters) -> Self {
         let image_height = ((r_params.image_width / r_params.aspect_ratio).floor()).max(1.);
         let theta = degrees_to_radians(c_params.vfov);
-        let h = f32::tan(theta / 2.0);
+        let h = f64::tan(theta as f64 / 2.0) as Float;
         let viewport_height = 2.0 * h * c_params.focus_distance;
         let viewport_width = viewport_height * r_params.image_width / image_height;
 
@@ -96,7 +98,7 @@ impl Camera {
             - viewport_v / 2.0;
 
         let defocus_radius =
-            c_params.focus_distance * f32::tan(degrees_to_radians(c_params.defocus_angle / 2.));
+            c_params.focus_distance * Float::tan(degrees_to_radians(c_params.defocus_angle / 2.));
 
         let pixel_00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
         let defocus_disk_u = u * defocus_radius;
@@ -117,24 +119,101 @@ impl Camera {
     }
 }
 
+struct Img(pub Vec<Vec<Color>>);
+
+impl std::ops::Add for Img {
+    type Output = Self;
+    fn add(mut self, rhs: Self) -> Self::Output {
+        for j in 0..self.0.len() {
+            for i in 0..self.0[0].len() {
+                self.0[j][i] += rhs.0[j][i];
+            }
+        }
+        self
+    }
+}
+
+impl std::ops::Div<Float> for Img {
+    type Output = Self;
+    fn div(mut self, rhs: Float) -> Self::Output {
+        for j in 0..self.0.len() {
+            for i in 0..self.0[0].len() {
+                self.0[j][i] /= rhs;
+            }
+        }
+        self
+    }
+}
+
 impl Camera {
-    pub fn render(&self, mut f: impl Write, world: impl Hit) {
+    pub fn render_multi(
+        &self,
+        n_threads: u16,
+        f: impl Write,
+        world: Arc<dyn Hit + Send + Sync + 'static>,
+    ) {
+        let samples_per_worker = self.r_params.samples_per_pixel as i32 / n_threads as i32;
+        let mut buf = None;
+        for result in (0..n_threads)
+            .map(|i| {
+                let mut this = self.clone();
+                this.r_params.samples_per_pixel = samples_per_worker as _;
+                let thread_world = world.clone();
+                std::thread::Builder::new()
+                    .name(format!("worker-{}", i))
+                    .spawn(move || this.render_to_buf(thread_world))
+            })
+            .collect::<Vec<_>>()
+        {
+            if let Ok(handle) = result {
+                if let Ok(part_buf) = handle.join() {
+                    if let Some(img) = buf {
+                        buf = Some(img + part_buf);
+                    } else {
+                        buf = Some(part_buf);
+                    }
+                }
+            }
+        }
+        let buf = buf.unwrap() / n_threads as Float;
+        self.write_to_f(f, buf);
+    }
+
+    fn render_to_buf(&self, world: impl Hit) -> Img {
+        let mut buf = Vec::with_capacity(self.image_height as usize);
+        for j in 0..self.image_height as usize {
+            eprint!("\r       ");
+            eprint!("\r{}%", ((j as Float / self.image_height) * 100.0).ceil());
+            let mut row = Vec::with_capacity(self.r_params.image_width as usize);
+            for i in 0..self.r_params.image_width as usize {
+                let mut color = Vec3::zero();
+                for _ in 0..self.r_params.samples_per_pixel as i64 {
+                    let r = self.get_ray(i as Float, j as Float);
+                    color += self.ray_color(&r, &world, self.r_params.max_bounces as u32);
+                }
+                row.push(color / self.r_params.samples_per_pixel);
+            }
+            buf.push(row);
+        }
+        Img(buf)
+    }
+
+    pub fn render(&self, f: impl Write, world: impl Hit) {
+        let buf = self.render_to_buf(world);
+        self.write_to_f(f, buf);
+    }
+
+    fn write_to_f(&self, mut f: impl Write, buf: Img) {
         write!(
             f,
             "P3\n{} {}\n255\n",
             self.r_params.image_width, self.image_height
         )
         .expect("write failed");
-        for j in 0..self.image_height as i64 {
-            eprint!("\r       ");
-            eprint!("\r{}%", ((j as f32 / self.image_height) * 100.0).ceil());
-            for i in 0..self.r_params.image_width as i64 {
-                let mut color = Vec3::zero();
-                for _ in 0..self.r_params.samples_per_pixel as i64 {
-                    let r = self.get_ray(i as f32, j as f32);
-                    color += self.ray_color(&r, &world, self.r_params.max_bounces as u32);
-                }
-                write_color(&mut f, &(color * self.pixel_samples_scale)).expect("io error");
+        for j in 0..self.image_height as usize {
+            for i in 0..self.r_params.image_width as usize {
+                let (r, g, b) = to_8bit(&buf.0[j][i]);
+                writeln!(f, "{} {} {}", r, g, b).expect("write");
             }
         }
         eprintln!();
@@ -149,7 +228,7 @@ impl Camera {
         }
 
         // ray hit something
-        if let Some(hit) = world.hit(r, &Interval::new(0.001, f32::MAX)) {
+        if let Some(hit) = world.hit(r, &Interval::new(0.001, Float::MAX)) {
             // something reflected ray
             if let Some(scatter) = hit.material.scatter(r, &hit) {
                 scatter.color_attenuation
@@ -163,7 +242,7 @@ impl Camera {
         }
     }
 
-    fn get_ray(&self, i: f32, j: f32) -> Ray {
+    fn get_ray(&self, i: Float, j: Float) -> Ray {
         let offset = Self::sample_square();
         let pixel_sample = self.pixel_00_loc
             + ((i + offset.0) * self.pixel_delta_u)

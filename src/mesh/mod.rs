@@ -1,19 +1,34 @@
+mod quad;
+mod volume;
+
 use anyhow::{Result, anyhow};
 use obj::{Obj, load_obj};
-use std::rc::Rc;
+use std::sync::Arc;
 use std::{fs::File, io::BufReader};
 
+use crate::Float;
 use crate::aabb::Aabb;
 use crate::hittable::{Hit, HitRecord};
 use crate::interval::Interval;
 use crate::material::Material;
 use crate::math::{Point, Ray, Vec3, cross, dot};
 
-// triangles are clockwise forward
+// counter-clockwise winding front
 pub struct Triangle {
     pub a: Point,
     pub b: Point,
     pub c: Point,
+}
+
+#[macro_export]
+macro_rules! tri {
+    ($a:expr, $b:expr, $c:expr) => {
+        $crate::mesh::Triangle {
+            a: $a,
+            b: $b,
+            c: $c,
+        }
+    };
 }
 
 pub struct Vertex {
@@ -22,12 +37,12 @@ pub struct Vertex {
 
 pub struct Mesh {
     tris: Vec<Triangle>,
-    material: Rc<dyn Material>,
+    material: Arc<dyn Material>,
     bbox: Aabb,
 }
 
 impl Mesh {
-    pub fn try_from_file(path: &str, material: Rc<dyn Material>) -> Result<Self> {
+    pub fn try_from_file(path: &str, material: Arc<dyn Material>) -> Result<Self> {
         let buf = BufReader::new(File::open(path)?);
         let obj: Obj = load_obj(buf)?;
 
@@ -53,21 +68,21 @@ impl Mesh {
         let tris = indices.iter().fold(Vec::new(), |mut tris, i| {
             tris.push(Triangle {
                 a: Vec3(
-                    obj.vertices[i[0]].position[0],
-                    obj.vertices[i[0]].position[1],
-                    obj.vertices[i[0]].position[2],
+                    obj.vertices[i[0]].position[0] as _,
+                    obj.vertices[i[0]].position[1] as _,
+                    obj.vertices[i[0]].position[2] as _,
                 ),
 
                 b: Vec3(
-                    obj.vertices[i[1]].position[0],
-                    obj.vertices[i[1]].position[1],
-                    obj.vertices[i[1]].position[2],
+                    obj.vertices[i[1]].position[0] as _,
+                    obj.vertices[i[1]].position[1] as _,
+                    obj.vertices[i[1]].position[2] as _,
                 ),
 
                 c: Vec3(
-                    obj.vertices[i[2]].position[0],
-                    obj.vertices[i[2]].position[1],
-                    obj.vertices[i[2]].position[2],
+                    obj.vertices[i[2]].position[0] as _,
+                    obj.vertices[i[2]].position[1] as _,
+                    obj.vertices[i[2]].position[2] as _,
                 ),
             });
             tris
@@ -84,31 +99,37 @@ impl Mesh {
         })
     }
 
-    pub fn quad(corner: Point, u: Vec3, v: Vec3, material: Rc<dyn Material>) -> Self {
-        let a = corner;
-        let b = a + u;
-        let c = a + v;
-        let d = b + v;
-        let bbox = Aabb::empty()
-            .union_pt(&a)
-            .union_pt(&b)
-            .union_pt(&c)
-            .union_pt(&d)
-            .pad();
-        let tris = vec![Triangle { a, b, c }, Triangle { a: b, b: d, c: c }];
-        Self {
-            tris,
-            material,
-            bbox,
-        }
-    }
-
     pub fn into_hittable(self) -> Box<dyn Hit> {
         Box::new(self)
     }
 
-    pub fn obj(self) -> Rc<dyn Hit> {
-        Rc::new(self)
+    pub fn obj(self) -> Arc<dyn Hit> {
+        Arc::new(self)
+    }
+
+    fn bounding_box(tris: &mut dyn Iterator<Item = &Triangle>) -> Aabb {
+        tris.fold(Aabb::empty(), |bounds, tri| {
+            bounds.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
+        })
+    }
+
+    pub fn rotate(mut self, rotation: Vec3) -> Self {
+        let center = self.bbox.center();
+        self.tris.iter_mut().for_each(|t| {
+            t.a = Self::rotate_point(t.a, center, rotation);
+            t.b = Self::rotate_point(t.b, center, rotation);
+            t.c = Self::rotate_point(t.c, center, rotation);
+        });
+        let bbox = Self::bounding_box(&mut self.tris.iter());
+        Self {
+            bbox,
+            material: self.material,
+            tris: self.tris,
+        }
+    }
+
+    fn rotate_point(point: Vec3, center: Vec3, rotation: Vec3) -> Vec3 {
+        todo!()
     }
 }
 
@@ -121,7 +142,7 @@ impl Mesh {
         let ray_cross_e2 = cross(r.direction, e2);
         let det = dot(&e1, &ray_cross_e2);
 
-        if det > -f32::EPSILON && det < f32::EPSILON {
+        if det > -crate::EPSILON && det < crate::EPSILON {
             return None;
         }
 
@@ -145,7 +166,7 @@ impl Mesh {
             -outward_normal
         };
         let t = inv_det * dot(&e2, &s_cross_e1);
-        if t > f32::EPSILON {
+        if t > crate::EPSILON {
             let intersection_point = r.origin + r.direction * t;
             Some(HitRecord {
                 front_face,
@@ -166,7 +187,7 @@ impl Hit for Mesh {
         for i in 0..self.tris.len() {
             if let Some(hit) = self.moller_trumbore_intersection(i, r) {
                 if ray_t.surrounds(hit.t)
-                    && hit.t < best_hit.as_ref().map(|h| h.t).unwrap_or(f32::MAX)
+                    && hit.t < best_hit.as_ref().map(|h| h.t).unwrap_or(Float::MAX)
                 {
                     best_hit = Some(hit);
                 }

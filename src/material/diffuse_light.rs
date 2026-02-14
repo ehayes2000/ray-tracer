@@ -1,14 +1,14 @@
 use super::Material;
 use crate::math::Color;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct DiffuseLight {
     pub color: Color,
 }
 
 impl DiffuseLight {
-    pub fn obj(color: Color) -> Rc<dyn Material> {
-        Rc::new(Self { color })
+    pub fn obj(color: Color) -> Arc<dyn Material> {
+        Arc::new(Self { color })
     }
 }
 

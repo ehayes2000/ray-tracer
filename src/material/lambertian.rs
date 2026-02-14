@@ -2,7 +2,7 @@ pub use super::{Material, Scatter};
 use crate::hittable::HitRecord;
 use crate::math::Ray;
 use crate::math::{Color, Vec3};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Lambertian {
     albedo: Color,
@@ -13,9 +13,15 @@ impl Lambertian {
         Self { albedo }
     }
 
-    pub fn obj(albedo: Color) -> Rc<dyn Material> {
+    pub fn obj(albedo: Color) -> Arc<dyn Material> {
         let lambertian = Self::new(albedo);
-        Rc::new(lambertian)
+        Arc::new(lambertian)
+    }
+}
+
+impl Into<Arc<dyn Material>> for Lambertian {
+    fn into(self) -> Arc<dyn Material> {
+        Arc::new(self)
     }
 }
 

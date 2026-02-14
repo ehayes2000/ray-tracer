@@ -8,7 +8,7 @@ use ray_tracer::{
 };
 
 fn main() {
-    let r = f32::cos(std::f32::consts::PI / 4.0);
+    let r = Float::cos(std::Float::consts::PI / 4.0);
     let mat_l = Lambertian::obj(v3!(0, 0, 1));
     let mat_r = Lambertian::obj(v3!(1, 0, 0));
     let mut world = HittableList::new();
@@ -30,5 +30,5 @@ fn main() {
         .write(true)
         .open("calibration.ppm")
         .expect("open calibration.ppm");
-    cam.render(&mut file, &world);
+    cam.render(&mut file, world);
 }

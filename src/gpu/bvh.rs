@@ -90,15 +90,15 @@ impl Bounds {
         }
     }
 
-    pub fn width(&self) -> f32 {
+    pub fn width(&self) -> Float {
         self.p_max.0 - self.p_min.0
     }
 
-    pub fn height(&self) -> f32 {
+    pub fn height(&self) -> Float {
         self.p_max.1 - self.p_min.1
     }
 
-    pub fn depth(&self) -> f32 {
+    pub fn depth(&self) -> Float {
         self.p_max.2 - self.p_min.2
     }
 

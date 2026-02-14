@@ -1,28 +1,29 @@
 use super::Material;
 use super::Scatter;
+use crate::Float;
 use crate::hittable::HitRecord;
 use crate::math::Ray;
 use crate::math::random;
 use crate::math::{Vec3, dot, unit_vector};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Dielectric {
-    refraction_index: f32,
+    refraction_index: Float,
 }
 
 impl Dielectric {
-    pub fn new(refraction_index: f32) -> Self {
+    pub fn new(refraction_index: Float) -> Self {
         Self { refraction_index }
     }
 
-    pub fn obj(refraction_index: f32) -> Rc<dyn Material> {
-        Rc::new(Self::new(refraction_index))
+    pub fn obj(refraction_index: Float) -> Arc<dyn Material> {
+        Arc::new(Self::new(refraction_index))
     }
 
-    fn reflectance(&self, cosine: f32) -> f32 {
+    fn reflectance(&self, cosine: Float) -> Float {
         let r0 = (1.0 - self.refraction_index) / (1.0 + self.refraction_index);
         let r0 = r0 * r0;
-        r0 + (1.0 - r0) * f32::powi(1.0 - cosine, 5)
+        r0 + (1.0 - r0) * Float::powi(1.0 - cosine, 5)
     }
 }
 
@@ -34,8 +35,8 @@ impl Material for Dielectric {
         } else {
             self.refraction_index
         };
-        let cos_theta = f32::min(dot(&-unit_direction, &rec.normal), 1.0);
-        let sin_theta = f32::sqrt(1.0 - cos_theta * cos_theta);
+        let cos_theta = Float::min(dot(&-unit_direction, &rec.normal), 1.0);
+        let sin_theta = Float::sqrt(1.0 - cos_theta * cos_theta);
         let direction = if ri * sin_theta > 1.0 || self.reflectance(cos_theta) > random() {
             unit_direction.reflect(&rec.normal)
         } else {

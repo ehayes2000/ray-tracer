@@ -1,4 +1,5 @@
 use super::vec3::Vec3;
+use crate::Float;
 pub type Point3 = Vec3;
 
 #[derive(Default, Debug)]
@@ -20,7 +21,17 @@ impl Ray {
         }
     }
 
-    pub fn at(&self, t: f32) -> Point3 {
+    pub fn at(&self, t: Float) -> Point3 {
         self.origin + (self.direction * t)
     }
+}
+
+#[macro_export]
+macro_rules! ray {
+    ($origin:expr, $direction:expr) => {
+        $crate::math::Ray {
+            origin: $origin,
+            direction: $direction,
+        }
+    };
 }

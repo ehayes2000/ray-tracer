@@ -1,8 +1,9 @@
 //! axis aligned bounding box
 
 use crate::{
+    EPSILON,
     interval::Interval,
-    math::{Point, Ray},
+    math::{Point, Ray, Vec3},
 };
 
 #[derive(Clone, Debug)]
@@ -65,15 +66,14 @@ impl Aabb {
     }
 
     pub fn pad(mut self) -> Self {
-        let epsilon = 0.001;
-        if self.x.size() < epsilon {
-            self.x = self.x.expand(epsilon);
+        if self.x.size() < EPSILON {
+            self.x = self.x.expand(EPSILON);
         }
-        if self.y.size() < epsilon {
-            self.y = self.y.expand(epsilon);
+        if self.y.size() < EPSILON {
+            self.y = self.y.expand(EPSILON);
         }
-        if self.z.size() < epsilon {
-            self.z = self.z.expand(epsilon);
+        if self.z.size() < EPSILON {
+            self.z = self.z.expand(EPSILON);
         }
         self
     }
@@ -116,10 +116,91 @@ impl Aabb {
         }
         Some(hit_t)
     }
+
+    pub fn center(&self) -> Vec3 {
+        Vec3(
+            self.x.max.midpoint(self.x.min),
+            self.y.max.midpoint(self.y.min),
+            self.z.max.midpoint(self.z.min),
+        )
+    }
 }
 
 impl Default for Aabb {
     fn default() -> Self {
         Self::empty()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::v3;
+
+    #[test]
+    fn bounds() {
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 0));
+        assert_eq!(bbox.x.min, 0.);
+        assert_eq!(bbox.x.max, 1.);
+        assert_eq!(bbox.y.min, 0.);
+        assert_eq!(bbox.y.max, 1.);
+        assert_eq!(bbox.z.min, 0.);
+        assert_eq!(bbox.z.max, 0.);
+
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 0)).pad();
+        assert_eq!(bbox.x.min, 0.);
+        assert_eq!(bbox.x.max, 1.);
+        assert_eq!(bbox.y.min, 0.);
+        assert_eq!(bbox.y.max, 1.);
+        assert_eq!(bbox.z.min, -EPSILON / 2.0);
+        assert_eq!(bbox.z.max, EPSILON / 2.0);
+    }
+
+    #[test]
+    fn center() {
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 1));
+        assert_eq!(bbox.center(), v3!(0.5, 0.5, 0.5));
+
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 0));
+        assert_eq!(bbox.center(), v3!(0.5, 0.5, 0));
+    }
+
+    #[test]
+    fn pad() {
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 0)).pad();
+        assert_eq!(bbox.center(), v3!(0.5, 0.5, 0));
+    }
+
+    #[test]
+    fn hit() {
+        let r = Ray {
+            direction: v3!(0, 0, 1),
+            origin: v3!(0.5, 0.5, -1),
+        };
+        let i = Interval::full();
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 0)).pad();
+        assert!(bbox.hit(&r, &i).is_some());
+        assert!(bbox.hit(&Ray::zero(), &i).is_none());
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0.01, 1.01, 0),
+                    origin: v3!(0.5, 0.5, 0.5)
+                },
+                &i
+            )
+            .is_none()
+        );
+
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(-2, 0.5, -1)
+                },
+                &i
+            )
+            .is_none()
+        )
     }
 }

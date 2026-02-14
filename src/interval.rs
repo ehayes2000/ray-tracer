@@ -1,21 +1,31 @@
+use crate::Float;
+
 #[derive(Debug, Clone)]
 pub struct Interval {
-    pub min: f32,
-    pub max: f32,
+    pub min: Float,
+    pub max: Float,
 }
 
 impl Interval {
     pub fn empty() -> Self {
         Self {
-            min: f32::MAX,
-            max: f32::MIN,
+            min: Float::MAX,
+            max: Float::MIN,
         }
     }
-    pub fn new(min: f32, max: f32) -> Self {
+
+    pub fn full() -> Self {
+        Self {
+            min: Float::MIN,
+            max: Float::MAX,
+        }
+    }
+
+    pub fn new(min: Float, max: Float) -> Self {
         Self { min, max }
     }
 
-    pub fn expand(self, delta: f32) -> Self {
+    pub fn expand(self, delta: Float) -> Self {
         let padding = delta / 2.0;
         Self {
             min: self.min - padding,
@@ -23,18 +33,18 @@ impl Interval {
         }
     }
 
-    pub fn size(&self) -> f32 {
+    pub fn size(&self) -> Float {
         self.max - self.min
     }
-    pub fn contains(&self, x: f32) -> bool {
+    pub fn contains(&self, x: Float) -> bool {
         self.min <= x && x <= self.max
     }
 
-    pub fn surrounds(&self, x: f32) -> bool {
+    pub fn surrounds(&self, x: Float) -> bool {
         self.min < x && x < self.max
     }
 
-    pub fn clamp(&self, x: f32) -> f32 {
+    pub fn clamp(&self, x: Float) -> Float {
         if x < self.min {
             self.min
         } else if x > self.max {

@@ -67,6 +67,6 @@ fn main() {
         .open("random_spheres.ppm")
         .expect("random_spheres.ppm");
 
-    let bvh = BvhNode::from_objects(world.take_objects());
+    let bvh = world.into_bvh();
     camera.render(&mut output_file, bvh);
 }

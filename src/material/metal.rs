@@ -1,21 +1,22 @@
 use super::Material;
 use super::Scatter;
+use crate::Float;
 use crate::math::Ray;
 use crate::math::{Color, Vec3, dot, unit_vector};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Metal {
     albedo: Color,
-    roughness: f32,
+    roughness: Float,
 }
 
 impl Metal {
-    pub fn new(albedo: Color, roughness: f32) -> Self {
+    pub fn new(albedo: Color, roughness: Float) -> Self {
         Self { albedo, roughness }
     }
 
-    pub fn obj(albedo: Color, roughness: f32) -> Rc<dyn Material> {
-        Rc::new(Self::new(albedo, roughness))
+    pub fn obj(albedo: Color, roughness: Float) -> Arc<dyn Material> {
+        Arc::new(Self::new(albedo, roughness))
     }
 }
 

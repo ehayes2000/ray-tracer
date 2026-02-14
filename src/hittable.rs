@@ -1,3 +1,4 @@
+use crate::Float;
 use crate::aabb::Aabb;
 use crate::bvh::BvhNode;
 use crate::interval::Interval;
@@ -5,20 +6,29 @@ use crate::material::Material;
 use crate::math::Ray;
 use crate::math::{Point, Vec3, dot};
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::sync::Arc;
 
-pub trait Hit {
+pub trait Hit: Send + Sync + 'static {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord>;
     fn bounding_box(&self) -> &Aabb;
+}
+
+impl Hit for Arc<dyn Hit + Send + Sync + 'static> {
+    fn bounding_box(&self) -> &Aabb {
+        (**self).bounding_box()
+    }
+    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
+        (**self).hit(r, ray_t)
+    }
 }
 
 #[derive(Clone)]
 pub struct HitRecord {
     pub p: Point,
-    pub t: f32,
+    pub t: Float,
     pub normal: Vec3,
     pub front_face: bool,
-    pub material: Rc<dyn Material>,
+    pub material: Arc<dyn Material>,
 }
 
 impl Debug for HitRecord {
@@ -37,8 +47,8 @@ impl HitRecord {
         p: Vec3,
         r: &Ray,
         u_out_norm: Vec3,
-        t: f32,
-        material: Rc<dyn Material>,
+        t: Float,
+        material: Arc<dyn Material>,
     ) -> Self {
         let front_face = dot(&r.direction, &u_out_norm) < 0.0;
         let normal = if front_face { u_out_norm } else { -u_out_norm };
@@ -54,7 +64,7 @@ impl HitRecord {
 
 #[derive(Default)]
 pub struct HittableList {
-    objects: Vec<Rc<dyn Hit>>,
+    objects: Vec<Arc<dyn Hit>>,
     bbox: Aabb,
 }
 
@@ -78,7 +88,7 @@ impl HittableList {
         self.objects.clear();
     }
 
-    pub fn add(&mut self, object: Rc<dyn Hit>) {
+    pub fn add(&mut self, object: Arc<dyn Hit>) {
         self.bbox = self.bbox.clone().union(object.bounding_box());
         self.objects.push(object)
     }
@@ -88,9 +98,9 @@ impl HittableList {
     }
 }
 
-impl<T> Hit for T
-where
-    T: std::ops::Deref<Target = HittableList>,
+impl Hit for HittableList
+// where
+//     T: std::ops::Deref<Target = HittableList>,
 {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let mut any_hit = None::<HitRecord>;

@@ -22,7 +22,7 @@ fn main() {
     world.add(Sphere::obj(Vec3(-1.0, 0., -1.), 0.5, left));
     world.add(Sphere::obj(Vec3(-1.0, 0., -1.), 0.4, bubble));
     world.add(Sphere::obj(Vec3(0., -100.5, -1.), 100., ground));
-    let bvh = BvhNode::from_objects(world.take_objects());
+    let bvh = world.into_bvh();
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {

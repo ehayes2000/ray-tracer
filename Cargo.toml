@@ -1,3 +1,6 @@
+[features]
+gpu=[]
+
 [package]
 name = "ray_tracer"
 version = "0.1.0"
