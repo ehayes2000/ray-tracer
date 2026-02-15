@@ -165,13 +165,13 @@ impl Camera {
             })
             .collect::<Vec<_>>()
         {
-            if let Ok(handle) = result {
-                if let Ok(part_buf) = handle.join() {
-                    if let Some(img) = buf {
-                        buf = Some(img + part_buf);
-                    } else {
-                        buf = Some(part_buf);
-                    }
+            if let Ok(handle) = result
+                && let Ok(part_buf) = handle.join()
+            {
+                if let Some(img) = buf {
+                    buf = Some(img + part_buf);
+                } else {
+                    buf = Some(part_buf);
                 }
             }
         }

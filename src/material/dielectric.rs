@@ -5,7 +5,6 @@ use crate::hittable::HitRecord;
 use crate::math::Ray;
 use crate::math::random;
 use crate::math::{Vec3, dot, unit_vector};
-use std::sync::Arc;
 
 pub struct Dielectric {
     refraction_index: Float,

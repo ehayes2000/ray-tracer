@@ -207,7 +207,7 @@ impl Mesh {
         let inv_det = 1.0 / det;
         let s = r.origin - tri.a;
         let u = inv_det * dot(&s, &ray_cross_e2);
-        if u < 0.0 || u > 1.0 {
+        if !(0.0..1.0).contains(&u) {
             return None;
         }
 
@@ -243,12 +243,11 @@ impl Hit for Mesh {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let mut best_hit = None::<HitRecord>;
         for i in 0..self.tris.len() {
-            if let Some(hit) = self.moller_trumbore_intersection(i, r) {
-                if ray_t.surrounds(hit.t)
-                    && hit.t < best_hit.as_ref().map(|h| h.t).unwrap_or(Float::MAX)
-                {
-                    best_hit = Some(hit);
-                }
+            if let Some(hit) = self.moller_trumbore_intersection(i, r)
+                && ray_t.surrounds(hit.t)
+                && hit.t < best_hit.as_ref().map(|h| h.t).unwrap_or(Float::MAX)
+            {
+                best_hit = Some(hit);
             }
         }
         best_hit
@@ -263,7 +262,7 @@ macro_rules! mesh {
     ($path:expr, $material:expr) => {{
         let base = std::path::Path::new(file!()).parent().unwrap();
         let full_path = base.join($path);
-        crate::mesh::Mesh::try_from_file(full_path.to_str().unwrap(), $material)
+        $crate::mesh::Mesh::try_from_file(full_path.to_str().unwrap(), $material)
             .map(|mesh| mesh.into_hittable())
     }};
 }

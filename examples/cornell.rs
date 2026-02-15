@@ -3,7 +3,7 @@ use std::{fs::OpenOptions, io::BufWriter};
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::{Hitify, HittableList},
-    material::{DiffuseLight, Lambertian, Materialify, Metal},
+    material::{DiffuseLight, Lambertian, Materialify},
     mesh::Mesh,
     v3,
 };
@@ -12,10 +12,8 @@ use std::sync::Arc;
 fn main() {
     let red = Lambertian::new(v3!(0.65, 0.05, 0.05)).materialify();
     let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
-    let blue = Lambertian::new(v3!(0.05, 0.05, 0.64)).materialify();
     let green = Lambertian::new(v3!(0.12, 0.45, 0.15)).materialify();
     let light = DiffuseLight::new(v3!(15, 15, 15)).materialify();
-    let mirror = Metal::new(v3!(0.9, 0.9, 0.9), 0.0).materialify();
 
     let mut world = HittableList::empty();
 
@@ -71,7 +69,7 @@ fn main() {
             image_width: 600.,
             aspect_ratio: 1.0,
             max_bounces: 25.,
-            samples_per_pixel: 14. * 30.,
+            samples_per_pixel: 14. * 2.,
             background_color: v3!(0, 0, 0),
         },
     );

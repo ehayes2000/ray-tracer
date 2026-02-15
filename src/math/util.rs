@@ -1,6 +1,7 @@
 use crate::Float;
 use rand::Rng;
 
+#[allow(clippy::unnecessary_cast)]
 pub fn degrees_to_radians(degrees: Float) -> Float {
     (degrees as f64 * std::f64::consts::PI / 180.0) as Float
 }

@@ -122,12 +122,10 @@ impl Aabb {
             } else {
                 Axis::Z
             }
+        } else if self.y.size() > self.z.size() {
+            Axis::Y
         } else {
-            if self.y.size() > self.z.size() {
-                Axis::Y
-            } else {
-                Axis::Z
-            }
+            Axis::Z
         }
     }
 }

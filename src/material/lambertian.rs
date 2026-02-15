@@ -12,13 +12,11 @@ impl Lambertian {
     pub fn new(albedo: Color) -> Self {
         Self { albedo }
     }
-
-    // }
 }
 
-impl Into<Arc<dyn Material>> for Lambertian {
-    fn into(self) -> Arc<dyn Material> {
-        Arc::new(self)
+impl From<Lambertian> for Arc<dyn Material> {
+    fn from(value: Lambertian) -> Self {
+        Arc::new(value)
     }
 }
 

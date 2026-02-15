@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use wgpu::{Extent3d, PresentMode, TextureUsages, util::DeviceExt};
+use wgpu::{Extent3d, TextureUsages};
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -11,23 +11,6 @@ use winit::{
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct VertexBufferData {
     px: [f32; 2],
-}
-
-impl VertexBufferData {
-    pub fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<VertexBufferData>() as wgpu::BufferAddress, // 1.
-            step_mode: wgpu::VertexStepMode::Vertex,                                      // 2.
-            attributes: &[
-                // 3.
-                wgpu::VertexAttribute {
-                    offset: 0,                             // 4.
-                    shader_location: 0,                    // 5.
-                    format: wgpu::VertexFormat::Float32x2, // 6.
-                },
-            ],
-        }
-    }
 }
 
 pub struct State {
@@ -366,7 +349,7 @@ impl ApplicationHandler for App {
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
-        window_id: winit::window::WindowId,
+        _: winit::window::WindowId,
         event: WindowEvent,
     ) {
         let Some(state) = &mut self.state else {

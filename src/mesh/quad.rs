@@ -17,7 +17,7 @@ impl Mesh {
             .union_pt(&c)
             .union_pt(&d)
             .pad();
-        let tris = vec![Triangle { a, b, c }, Triangle { a: b, b: d, c: c }];
+        let tris = vec![Triangle { a, b, c }, Triangle { a: b, b: d, c }];
         Self {
             tris,
             material,

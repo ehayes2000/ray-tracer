@@ -3,7 +3,6 @@ use super::Scatter;
 use crate::Float;
 use crate::math::Ray;
 use crate::math::{Color, Vec3, dot, unit_vector};
-use std::sync::Arc;
 
 pub struct Metal {
     albedo: Color,

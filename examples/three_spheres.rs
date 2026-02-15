@@ -1,6 +1,6 @@
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::{Hit, Hitify, HittableList},
+    hittable::{Hitify, HittableList},
     material::{Dielectric, Lambertian, Materialify, Metal},
     math::Vec3,
     sphere::Sphere,

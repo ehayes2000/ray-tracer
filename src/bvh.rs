@@ -109,9 +109,7 @@ impl Hit for BvhNode {
         r: &crate::math::Ray,
         ray_t: &crate::math::Interval,
     ) -> Option<crate::hittable::HitRecord> {
-        if self.bbox.hit(r, ray_t).is_none() {
-            return None;
-        }
+        self.bbox.hit(r, ray_t)?;
         let lhit = self.left.hit(r, ray_t);
 
         let ray_t = if let Some(h) = &lhit {

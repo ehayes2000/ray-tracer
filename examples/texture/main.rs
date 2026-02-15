@@ -1,12 +1,8 @@
 use encase::ShaderType;
 use std::sync::Arc;
-use wgpu::{
-    FragmentState, VertexState,
-    util::{DeviceExt, RenderEncoder},
-};
+use wgpu::{FragmentState, VertexState, util::DeviceExt};
 use winit::{
     application::ApplicationHandler,
-    event::Event,
     event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop},
     window::{Window, WindowId},
@@ -388,12 +384,7 @@ impl ApplicationHandler<State> for App {
         let window = Arc::new(event_loop.create_window(attributes).unwrap());
         self.state = Some(pollster::block_on(State::new(window)));
     }
-    fn window_event(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        window_id: WindowId,
-        event: WindowEvent,
-    ) {
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
         let Some(state) = &mut self.state else { return };
 
         match event {
