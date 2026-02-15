@@ -24,9 +24,6 @@ impl Sphere {
             bbox,
         }
     }
-    pub fn obj(center: Point, radius: Float, material: Arc<dyn Material>) -> Arc<dyn Hit> {
-        Arc::new(Self::new(center, radius, material))
-    }
 }
 
 impl Hit for Sphere {
@@ -75,6 +72,6 @@ impl Hit for Sphere {
 #[macro_export]
 macro_rules! ball {
     ($pt:expr, $r:expr, $m:expr) => {
-        Sphere::obj($pt, $r, $m)
+        std::sync::Arc::new(Sphere::new($pt, $r, $m))
     };
 }

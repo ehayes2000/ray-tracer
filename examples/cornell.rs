@@ -2,35 +2,28 @@ use std::{fs::OpenOptions, io::BufWriter};
 
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::HittableList,
-    material::{DiffuseLight, Lambertian, Metal},
+    hittable::{Hitify, HittableList},
+    material::{DiffuseLight, Lambertian, Materialify, Metal},
+    mesh,
     mesh::Mesh,
     v3,
 };
 use std::sync::Arc;
 
 fn main() {
-    let red = Lambertian::obj(v3!(0.65, 0.05, 0.05));
-    let white = Lambertian::obj(v3!(0.73, 0.73, 0.73));
-    let blue = Lambertian::obj(v3!(0.05, 0.05, 0.64));
-    let green = Lambertian::obj(v3!(0.12, 0.45, 0.15));
-    let light = DiffuseLight::obj(v3!(15, 15, 15));
-    let mirror = Metal::obj(v3!(0.9, 0.9, 0.9), 0.0);
+    let red = Lambertian::new(v3!(0.65, 0.05, 0.05)).materialify();
+    let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
+    let blue = Lambertian::new(v3!(0.05, 0.05, 0.64)).materialify();
+    let green = Lambertian::new(v3!(0.12, 0.45, 0.15)).materialify();
+    let light = DiffuseLight::new(v3!(15, 15, 15)).materialify();
+    let mirror = Metal::new(v3!(0.9, 0.9, 0.9), 0.0).materialify();
 
-    let mut world = HittableList::new();
+    let mut world = HittableList::empty();
 
     // right wall
-    world.add(
-        Mesh::quad(
-            v3!(555, 0, 0),
-            v3!(0, 555, 0),
-            v3!(0, 0, 555),
-            green.clone(),
-        )
-        .obj(),
-    );
+    world.add(Mesh::quad(v3!(555, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), green).hittable());
     // light
-    world.add(Mesh::quad(v3!(343, 554, 332), v3!(-130, 0, 0), v3!(0, 0, -105), light).obj());
+    world.add(Mesh::quad(v3!(343, 554, 332), v3!(-130, 0, 0), v3!(0, 0, -105), light).hittable());
     // back wall
     world.add(
         Mesh::quad(
@@ -39,10 +32,10 @@ fn main() {
             v3!(0, 555, 0),
             white.clone(),
         )
-        .obj(),
+        .hittable(),
     );
     // left wall
-    world.add(Mesh::quad(v3!(0, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), red.clone()).obj());
+    world.add(Mesh::quad(v3!(0, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), red.clone()).hittable());
     // roof
     world.add(
         Mesh::quad(
@@ -51,14 +44,20 @@ fn main() {
             v3!(0, 0, -555),
             white.clone(),
         )
-        .obj(),
+        .hittable(),
     );
     // floor
-    world.add(Mesh::quad(v3!(0, 0, 0), v3!(555, 0, 0), v3!(0, 0, 555), white.clone()).obj());
+    world.add(Mesh::quad(v3!(0, 0, 0), v3!(555, 0, 0), v3!(0, 0, 555), white.clone()).hittable());
 
-    world.add(Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone()).obj());
+    world.add(Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone()).hittable());
+    world.add(Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone()).hittable());
 
-    world.add(Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone()).obj());
+    let dk = Mesh::try_from_file("models/dk-scaled.obj", mirror)
+        .expect("dk")
+        .scale(150.)
+        .translate(v3!(150, 150, 150))
+        .hittable();
+    world.add(dk);
 
     let camera = Camera::new(
         CameraParameters {
@@ -71,8 +70,8 @@ fn main() {
         RenderParameters {
             image_width: 600.,
             aspect_ratio: 1.0,
-            max_bounces: 50.,
-            samples_per_pixel: 14. * 50.,
+            max_bounces: 15.,
+            samples_per_pixel: 14. * 4.,
             background_color: v3!(0, 0, 0),
         },
     );
@@ -80,8 +79,8 @@ fn main() {
     let file = OpenOptions::new()
         .create(true)
         .write(true)
-        .open("cornell.ppm")
-        .expect("cornell.ppm");
+        .open("cornell_bvh.ppm")
+        .expect("cornell_bvh.ppm");
 
     let writer = BufWriter::new(file);
     camera.render_multi(14, writer, Arc::new(world.into_bvh()));

@@ -16,10 +16,6 @@ impl Dielectric {
         Self { refraction_index }
     }
 
-    pub fn obj(refraction_index: Float) -> Arc<dyn Material> {
-        Arc::new(Self::new(refraction_index))
-    }
-
     fn reflectance(&self, cosine: Float) -> Float {
         let r0 = (1.0 - self.refraction_index) / (1.0 + self.refraction_index);
         let r0 = r0 * r0;

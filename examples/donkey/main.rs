@@ -1,7 +1,7 @@
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::HittableList,
-    material::{Lambertian, Metal},
+    hittable::{Hitify, HittableList},
+    material::{Lambertian, Materialify, Metal},
     math::Vec3,
     mesh,
     sphere::Sphere,
@@ -9,12 +9,12 @@ use ray_tracer::{
 };
 
 fn main() {
-    let ground = Lambertian::obj(Vec3(0.8, 0.8, 0.0));
-    let metal = Metal::obj(Vec3(0.8, 0.6, 0.2), 1.0);
+    let ground = Lambertian::new(Vec3(0.8, 0.8, 0.0)).materialify();
+    let metal = Metal::new(Vec3(0.8, 0.6, 0.2), 1.0).materialify();
 
-    let mut world = HittableList::new();
+    let mut world = HittableList::empty();
     let mesh = mesh!("dk.obj", metal).expect("load mesh");
-    world.add(Sphere::obj(Vec3(0., -10000., -1.), 10000., ground));
+    world.add(Sphere::new(Vec3(0., -10000., -1.), 10000., ground).hittable());
     world.add(mesh.into());
 
     let rparams = RenderParameters::default();

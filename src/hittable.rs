@@ -78,7 +78,10 @@ impl Debug for HittableList {
 }
 
 impl HittableList {
-    pub fn new() -> Self {
+    pub fn new(objects: Vec<Arc<dyn Hit>>, bbox: Aabb) -> Self {
+        Self { bbox, objects }
+    }
+    pub fn empty() -> Self {
         Self {
             objects: vec![],
             bbox: Aabb::empty(),
@@ -98,10 +101,7 @@ impl HittableList {
     }
 }
 
-impl Hit for HittableList
-// where
-//     T: std::ops::Deref<Target = HittableList>,
-{
+impl Hit for HittableList {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let mut any_hit = None::<HitRecord>;
         let mut closest_so_far = ray_t.max;
@@ -116,5 +116,15 @@ impl Hit for HittableList
 
     fn bounding_box(&self) -> &Aabb {
         &self.bbox
+    }
+}
+
+pub trait Hitify {
+    fn hittable(self) -> Arc<dyn Hit>;
+}
+
+impl<T: Hit> Hitify for T {
+    fn hittable(self) -> Arc<dyn Hit> {
+        Arc::new(self)
     }
 }

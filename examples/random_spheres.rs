@@ -2,15 +2,16 @@ use ray_tracer::{
     Float, ball,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
-    material::{Dielectric, Lambertian, Metal},
+    material::{Dielectric, Lambertian, Materialify, Metal},
     math::{Vec3, random, random_float},
     sphere::Sphere,
     v3,
 };
+use std::sync::Arc;
 
 fn main() {
-    let mut world = HittableList::new();
-    let ground_m = Lambertian::obj(v3!(0.5, 0.5, 0.5));
+    let mut world = HittableList::empty();
+    let ground_m = Lambertian::new(v3!(0.5, 0.5, 0.5)).materialify();
     world.add(ball!(v3!(0, -1000, 0), 1000., ground_m));
     for a in -11..11 {
         let a = a as Float;
@@ -21,28 +22,28 @@ fn main() {
             if (center - v3!(4, 0.2, 0)).len() > 0.9 {
                 let material = if mat < 0.8 {
                     let color = Vec3::unit_random() * Vec3::unit_random();
-                    Lambertian::obj(color)
+                    Lambertian::new(color).materialify()
                 } else if mat < 0.95 {
                     let color = Vec3::random_mm(0.5, 1.0);
                     let fuzz = random_float(0., 0.5);
-                    Metal::obj(color, fuzz)
+                    Metal::new(color, fuzz).materialify()
                 } else {
-                    Dielectric::obj(1.5)
+                    Dielectric::new(1.5).materialify()
                 };
                 world.add(ball!(center, 0.2, material))
             }
         }
     }
-    world.add(ball!(v3!(0, 1, 0), 1.0, Dielectric::obj(1.5)));
+    world.add(ball!(v3!(0, 1, 0), 1.0, Dielectric::new(1.5).materialify()));
     world.add(ball!(
         v3!(-4, 1, 0),
         1.0,
-        Lambertian::obj(v3!(0.4, 0.2, 0.1))
+        Lambertian::new(v3!(0.4, 0.2, 0.1)).materialify()
     ));
     world.add(ball!(
         v3!(4, 1, 0),
         1.0,
-        Metal::obj(v3!(0.7, 0.6, 0.5), 0.0)
+        Metal::new(v3!(0.7, 0.6, 0.5), 0.0).materialify()
     ));
     let render_params = RenderParameters {
         aspect_ratio: 16. / 9.,
@@ -66,6 +67,5 @@ fn main() {
         .open("random_spheres.ppm")
         .expect("random_spheres.ppm");
 
-    let bvh = world.into_bvh();
-    camera.render(&mut output_file, bvh);
+    camera.render_multi(14, &mut output_file, Arc::new(world.into_bvh()));
 }

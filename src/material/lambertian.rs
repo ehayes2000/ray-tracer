@@ -13,10 +13,7 @@ impl Lambertian {
         Self { albedo }
     }
 
-    pub fn obj(albedo: Color) -> Arc<dyn Material> {
-        let lambertian = Self::new(albedo);
-        Arc::new(lambertian)
-    }
+    // }
 }
 
 impl Into<Arc<dyn Material>> for Lambertian {

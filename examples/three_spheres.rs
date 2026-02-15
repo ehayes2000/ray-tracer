@@ -1,27 +1,26 @@
 use ray_tracer::{
-    bvh::BvhNode,
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::HittableList,
-    material::{Dielectric, Lambertian, Metal},
+    hittable::{Hit, Hitify, HittableList},
+    material::{Dielectric, Lambertian, Materialify, Metal},
     math::Vec3,
     sphere::Sphere,
     v3,
 };
 
 fn main() {
-    let ground = Lambertian::obj(Vec3(0.8, 0.8, 0.0));
-    let left = Dielectric::obj(1.5);
-    let bubble = Dielectric::obj(1.0 / 1.5);
-    let center = Lambertian::obj(Vec3(0.1, 0.2, 0.5));
-    let right = Metal::obj(Vec3(0.8, 0.6, 0.2), 1.0);
+    let ground = Lambertian::new(Vec3(0.8, 0.8, 0.0)).materialify();
+    let left = Dielectric::new(1.5).materialify();
+    let bubble = Dielectric::new(1.0 / 1.5).materialify();
+    let center = Lambertian::new(Vec3(0.1, 0.2, 0.5)).materialify();
+    let right = Metal::new(Vec3(0.8, 0.6, 0.2), 1.0).materialify();
 
-    let mut world = HittableList::new();
+    let mut world = HittableList::empty();
 
-    world.add(Sphere::obj(Vec3(0., 0., -1.2), 0.5, center));
-    world.add(Sphere::obj(Vec3(1.0, 0., -1.), 0.5, right));
-    world.add(Sphere::obj(Vec3(-1.0, 0., -1.), 0.5, left));
-    world.add(Sphere::obj(Vec3(-1.0, 0., -1.), 0.4, bubble));
-    world.add(Sphere::obj(Vec3(0., -100.5, -1.), 100., ground));
+    world.add(Sphere::new(Vec3(0., 0., -1.2), 0.5, center).hittable());
+    world.add(Sphere::new(Vec3(1.0, 0., -1.), 0.5, right).hittable());
+    world.add(Sphere::new(Vec3(-1.0, 0., -1.), 0.5, left).hittable());
+    world.add(Sphere::new(Vec3(-1.0, 0., -1.), 0.4, bubble).hittable());
+    world.add(Sphere::new(Vec3(0., -100.5, -1.), 100., ground).hittable());
     let bvh = world.into_bvh();
 
     let rparams = RenderParameters::default();
@@ -40,5 +39,5 @@ fn main() {
         .open("three_spheres.ppm")
         .expect("three_spheres.ppm");
     let mut writer = std::io::BufWriter::new(output_file);
-    cam.render(&mut writer, bvh);
+    cam.render_multi(14, &mut writer, std::sync::Arc::new(bvh));
 }

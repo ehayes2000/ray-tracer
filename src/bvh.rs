@@ -1,4 +1,8 @@
-use crate::{aabb::Aabb, hittable::Hit};
+use crate::{
+    aabb::Aabb,
+    hittable::{Hit, Hitify, HittableList},
+    math::Interval,
+};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -11,9 +15,6 @@ struct EmptyPartition(Aabb);
 impl EmptyPartition {
     pub fn new() -> Self {
         Self(Aabb::empty())
-    }
-    pub fn obj(self) -> Arc<dyn Hit> {
-        Arc::new(self)
     }
 }
 impl Hit for EmptyPartition {
@@ -46,7 +47,7 @@ impl BvhNode {
 
     fn recursive_build(objects: Vec<Arc<dyn Hit>>) -> NodeOrHittable {
         if objects.is_empty() {
-            return NodeOrHittable::Hittable(EmptyPartition::new().obj());
+            return NodeOrHittable::Hittable(EmptyPartition::new().hittable());
         } else if objects.len() == 1 {
             return NodeOrHittable::Hittable(objects[0].clone());
         }
@@ -59,6 +60,10 @@ impl BvhNode {
         });
         let partition_axis = bbox_centroid.longest();
         let midpoint = bbox_centroid[partition_axis].center();
+        // coplaner objects cannot be partitioned
+        if bbox_centroid[partition_axis].size() == 0. {
+            return NodeOrHittable::Hittable(HittableList::new(objects, bbox).hittable());
+        }
         let (left, right) =
             objects
                 .into_iter()
@@ -104,7 +109,16 @@ impl Hit for BvhNode {
         r: &crate::math::Ray,
         ray_t: &crate::math::Interval,
     ) -> Option<crate::hittable::HitRecord> {
+        if self.bbox.hit(r, ray_t).is_none() {
+            return None;
+        }
         let lhit = self.left.hit(r, ray_t);
+
+        let ray_t = if let Some(h) = &lhit {
+            &Interval::new(ray_t.min, h.t)
+        } else {
+            ray_t
+        };
         let rhit = self.right.hit(r, ray_t);
         match (lhit, rhit) {
             (Some(l), Some(r)) => {
@@ -146,6 +160,7 @@ mod test {
     use super::*;
     use crate::Float;
     use crate::material::Lambertian;
+    use crate::material::Materialify;
     use crate::math::Interval;
     use crate::math::Ray;
     use crate::mesh::Mesh;
@@ -157,8 +172,8 @@ mod test {
     // front small
     #[test]
     fn obscured_hit() {
-        let material = Lambertian::obj(v3!(1, 1, 1));
-        let objects = vec![
+        let material = Lambertian::new(v3!(1, 1, 1)).materialify();
+        let objects: Vec<Arc<dyn Hit>> = vec![
             // back quad
             Mesh::quad(
                 v3!(0, 0, 10),
@@ -166,14 +181,14 @@ mod test {
                 v3!(0, 1000, 0),
                 material.clone(),
             )
-            .obj(),
+            .hittable(),
             Mesh::quad(
                 v3!(10, 10, 0),
                 v3!(10, 0, 0),
                 v3!(0, 10, 0),
                 material.clone(),
             )
-            .obj(),
+            .hittable(),
         ];
         let look_from = v3!(15, 15, -10);
         let ray = Ray {

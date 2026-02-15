@@ -2,16 +2,16 @@ use ray_tracer::{
     Float, ball,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::HittableList,
-    material::Lambertian,
+    material::{Lambertian, Materialify},
     sphere::Sphere,
     v3,
 };
 
 fn main() {
     let r = Float::cos((std::f64::consts::PI / 4.0) as Float);
-    let mat_l = Lambertian::obj(v3!(0, 0, 1));
-    let mat_r = Lambertian::obj(v3!(1, 0, 0));
-    let mut world = HittableList::new();
+    let mat_l = Lambertian::new(v3!(0, 0, 1)).materialify();
+    let mat_r = Lambertian::new(v3!(1, 0, 0)).materialify();
+    let mut world = HittableList::empty();
 
     world.add(ball!(v3!(-r, 0, -1), r, mat_l));
     world.add(ball!(v3!(r, 0, -1), r, mat_r));

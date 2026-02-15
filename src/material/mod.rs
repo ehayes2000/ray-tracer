@@ -12,6 +12,7 @@ use crate::hittable::HitRecord;
 use crate::math::Color;
 use crate::math::Point;
 use crate::math::Ray;
+use std::sync::Arc;
 
 pub struct Scatter {
     pub color_attenuation: Color,
@@ -22,5 +23,15 @@ pub trait Material: Send + Sync + 'static {
     fn scatter(&self, ray_in: &Ray, hit: &HitRecord) -> Option<Scatter>;
     fn emit(&self, _: Point) -> Color {
         Color::zero()
+    }
+}
+
+pub trait Materialify {
+    fn materialify(self) -> Arc<dyn Material>;
+}
+
+impl<T: Material> Materialify for T {
+    fn materialify(self) -> Arc<dyn Material> {
+        Arc::new(self)
     }
 }

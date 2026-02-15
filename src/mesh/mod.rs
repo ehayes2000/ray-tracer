@@ -102,10 +102,6 @@ impl Mesh {
         Box::new(self)
     }
 
-    pub fn obj(self) -> Arc<dyn Hit> {
-        Arc::new(self)
-    }
-
     fn bounding_box(tris: &mut dyn Iterator<Item = &Triangle>) -> Aabb {
         tris.fold(Aabb::empty(), |bounds, tri| {
             bounds.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
@@ -129,6 +125,51 @@ impl Mesh {
 
     fn rotate_point(point: Vec3, center: Vec3, rotation: Vec3) -> Vec3 {
         todo!()
+    }
+
+    pub fn translate(self, v: Vec3) -> Self {
+        let tris = self
+            .tris
+            .into_iter()
+            .map(|mut tri| {
+                tri.a += v;
+                tri.b += v;
+                tri.c += v;
+                tri
+            })
+            .collect::<Vec<_>>();
+        let bbox = tris.iter().fold(Aabb::empty(), |acc, tri| {
+            acc.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
+        });
+
+        Self {
+            tris,
+            bbox,
+            material: self.material,
+        }
+    }
+
+    pub fn scale(self, f: Float) -> Self {
+        let c = self.bbox.center();
+        let tris = self
+            .tris
+            .into_iter()
+            .map(|mut tri| {
+                tri.a = (tri.a - c) * f + c;
+                tri.b = (tri.b - c) * f + c;
+                tri.c = (tri.c - c) * f + c;
+                tri
+            })
+            .collect::<Vec<_>>();
+        let bbox = tris.iter().fold(Aabb::empty(), |acc, tri| {
+            acc.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
+        });
+
+        Self {
+            bbox,
+            tris,
+            material: self.material,
+        }
     }
 }
 

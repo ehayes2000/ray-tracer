@@ -14,10 +14,6 @@ impl Metal {
     pub fn new(albedo: Color, roughness: Float) -> Self {
         Self { albedo, roughness }
     }
-
-    pub fn obj(albedo: Color, roughness: Float) -> Arc<dyn Material> {
-        Arc::new(Self::new(albedo, roughness))
-    }
 }
 
 impl Material for Metal {

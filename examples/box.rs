@@ -2,22 +2,22 @@ use std::io::BufWriter;
 
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::HittableList,
-    material::Lambertian,
+    hittable::{Hitify, HittableList},
+    material::{Lambertian, Materialify},
     mesh::Mesh,
     v3,
 };
 
 fn main() {
     // Materials
-    let left_red = Lambertian::obj(v3!(1.0, 0.2, 0.2));
-    let back_green = Lambertian::obj(v3!(0.2, 1.0, 0.2));
-    let right_blue = Lambertian::obj(v3!(0.2, 0.2, 1.0));
-    let upper_orange = Lambertian::obj(v3!(1.0, 0.5, 0.0));
-    let lower_teal = Lambertian::obj(v3!(0.2, 0.8, 0.8));
+    let left_red = Lambertian::new(v3!(1.0, 0.2, 0.2)).materialify();
+    let back_green = Lambertian::new(v3!(0.2, 1.0, 0.2)).materialify();
+    let right_blue = Lambertian::new(v3!(0.2, 0.2, 1.0)).materialify();
+    let upper_orange = Lambertian::new(v3!(1.0, 0.5, 0.0)).materialify();
+    let lower_teal = Lambertian::new(v3!(0.2, 0.8, 0.8)).materialify();
 
     // Quads
-    let mut world = HittableList::new();
+    let mut world = HittableList::empty();
     world.add(
         Mesh::quad(
             v3!(-3.0, -2.0, 5.0),
@@ -25,7 +25,7 @@ fn main() {
             v3!(0.0, 4.0, 0.0),
             left_red,
         )
-        .obj(),
+        .hittable(),
     );
     world.add(
         Mesh::quad(
@@ -34,7 +34,7 @@ fn main() {
             v3!(0.0, 4.0, 0.0),
             back_green,
         )
-        .obj(),
+        .hittable(),
     );
     world.add(
         Mesh::quad(
@@ -43,7 +43,7 @@ fn main() {
             v3!(0.0, 4.0, 0.0),
             right_blue,
         )
-        .obj(),
+        .hittable(),
     );
     world.add(
         Mesh::quad(
@@ -52,7 +52,7 @@ fn main() {
             v3!(0.0, 0.0, 4.0),
             upper_orange,
         )
-        .obj(),
+        .hittable(),
     );
     world.add(
         Mesh::quad(
@@ -61,7 +61,7 @@ fn main() {
             v3!(0.0, 0.0, -4.0),
             lower_teal,
         )
-        .obj(),
+        .hittable(),
     );
 
     let cparams = CameraParameters {
