@@ -124,7 +124,25 @@ impl Mesh {
     }
 
     fn rotate_point(point: Vec3, center: Vec3, rotation: Vec3) -> Vec3 {
-        todo!()
+        let p = point - center;
+
+        let (sx, cx) = rotation.0.sin_cos();
+        let (sy, cy) = rotation.1.sin_cos();
+        let (sz, cz) = rotation.2.sin_cos();
+
+        let y1 = p.1 * cx - p.2 * sx;
+        let z1 = p.1 * sx + p.2 * cx;
+        let x1 = p.0;
+
+        let x2 = x1 * cy + z1 * sy;
+        let z2 = -x1 * sy + z1 * cy;
+        let y2 = y1;
+
+        let x3 = x2 * cz - y2 * sz;
+        let y3 = x2 * sz + y2 * cz;
+        let z3 = z2;
+
+        Vec3(x3, y3, z3) + center
     }
 
     pub fn translate(self, v: Vec3) -> Self {

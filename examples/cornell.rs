@@ -4,7 +4,6 @@ use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
     hittable::{Hitify, HittableList},
     material::{DiffuseLight, Lambertian, Materialify, Metal},
-    mesh,
     mesh::Mesh,
     v3,
 };
@@ -49,15 +48,16 @@ fn main() {
     // floor
     world.add(Mesh::quad(v3!(0, 0, 0), v3!(555, 0, 0), v3!(0, 0, 555), white.clone()).hittable());
 
-    world.add(Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone()).hittable());
-    world.add(Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone()).hittable());
-
-    let dk = Mesh::try_from_file("models/dk-scaled.obj", mirror)
-        .expect("dk")
-        .scale(150.)
-        .translate(v3!(150, 150, 150))
-        .hittable();
-    world.add(dk);
+    world.add(
+        Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone())
+            .rotate(v3!(0, -0.3, 0))
+            .hittable(),
+    );
+    world.add(
+        Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone())
+            .rotate(v3!(0, 0.3, 0))
+            .hittable(),
+    );
 
     let camera = Camera::new(
         CameraParameters {
@@ -70,8 +70,8 @@ fn main() {
         RenderParameters {
             image_width: 600.,
             aspect_ratio: 1.0,
-            max_bounces: 15.,
-            samples_per_pixel: 14. * 4.,
+            max_bounces: 25.,
+            samples_per_pixel: 14. * 30.,
             background_color: v3!(0, 0, 0),
         },
     );
@@ -79,8 +79,8 @@ fn main() {
     let file = OpenOptions::new()
         .create(true)
         .write(true)
-        .open("cornell_bvh.ppm")
-        .expect("cornell_bvh.ppm");
+        .open("cornell.ppm")
+        .expect("cornell.ppm");
 
     let writer = BufWriter::new(file);
     camera.render_multi(14, writer, Arc::new(world.into_bvh()));

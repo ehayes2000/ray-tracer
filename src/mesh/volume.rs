@@ -21,23 +21,23 @@ impl Mesh {
         let td = tc - v3!(tc_v.0, 0, 0);
 
         let tris = vec![
-            // bottom
-            tri!(bb, ba, bd),
-            tri!(bb, bd, bc),
-            // top
+            // bottom (-y outward)
+            tri!(ba, bb, bd),
+            tri!(bb, bc, bd),
+            // top (+y outward)
             tri!(tb, ta, td),
             tri!(tb, td, tc),
-            // side_ab
-            tri!(ba, bb, tb),
+            // side_ab (-z outward)
+            tri!(bb, ba, tb),
             tri!(ta, tb, ba),
-            // side_bc
-            tri!(bb, bc, tc),
+            // side_bc (+x outward)
+            tri!(bb, tc, bc),
             tri!(tb, tc, bb),
-            // side_cd
-            tri!(bc, bd, td),
+            // side_cd (+z outward)
+            tri!(bd, bc, td),
             tri!(tc, td, bc),
-            // side_ad
-            tri!(bd, ba, ta),
+            // side_ad (-x outward)
+            tri!(bd, td, ba),
             tri!(td, ta, ba),
         ];
 
