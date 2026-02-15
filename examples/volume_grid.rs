@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, io::BufWriter};
 
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::{Hitify, HittableList},
+    hittable_list::HittableList,
     material::{DiffuseLight, Lambertian, Materialify},
     mesh::Mesh,
     v3,
@@ -11,56 +11,48 @@ use std::sync::Arc;
 
 fn main() {
     let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
-    let light_behind = DiffuseLight::new(v3!(10, 10, 10)).materialify();
-    let light_top = DiffuseLight::new(v3!(15, 4, 4)).materialify(); // red
-    let light_bottom = DiffuseLight::new(v3!(4, 15, 4)).materialify(); // green
-    let light_left = DiffuseLight::new(v3!(4, 4, 15)).materialify(); // blue
-    let light_right = DiffuseLight::new(v3!(15, 12, 4)).materialify(); // orange
+    let light_behind = DiffuseLight::new(v3!(10, 10, 10));
+    let light_top = DiffuseLight::new(v3!(15, 4, 4)); // red
+    let light_bottom = DiffuseLight::new(v3!(4, 15, 4)); // green
+    let light_left = DiffuseLight::new(v3!(4, 4, 15)); // blue
+    let light_right = DiffuseLight::new(v3!(15, 12, 4)); // orange
 
-    let mut world = HittableList::empty();
-
-    // Light behind the camera (camera at z=-800)
-    world.add(
-        Mesh::quad(
+    let mut world = HittableList::empty()
+        // Light behind the camera (camera at z=-800)
+        .push(Mesh::quad(
             v3!(100, 500, -900),
             v3!(400, 0, 0),
             v3!(0, 0, 200),
             light_behind,
-        )
-        .hittable(),
-    );
-    // Top light (just above visible frame)
-    world.add(Mesh::quad(v3!(100, 900, 50), v3!(400, 0, 0), v3!(0, 0, 300), light_top).hittable());
-    // Bottom light (just below visible frame)
-    world.add(
-        Mesh::quad(
+        ))
+        // Top light (just above visible frame)
+        .push(Mesh::quad(
+            v3!(100, 900, 50),
+            v3!(400, 0, 0),
+            v3!(0, 0, 300),
+            light_top,
+        ))
+        // Bottom light (just below visible frame)
+        .push(Mesh::quad(
             v3!(100, -350, 50),
             v3!(400, 0, 0),
             v3!(0, 0, 300),
             light_bottom,
-        )
-        .hittable(),
-    );
-    // Left light (just left of visible frame)
-    world.add(
-        Mesh::quad(
+        ))
+        // Left light (just left of visible frame)
+        .push(Mesh::quad(
             v3!(-350, 100, 50),
             v3!(0, 400, 0),
             v3!(0, 0, 300),
             light_left,
-        )
-        .hittable(),
-    );
-    // Right light (just right of visible frame)
-    world.add(
-        Mesh::quad(
+        ))
+        // Right light (just right of visible frame)
+        .push(Mesh::quad(
             v3!(900, 100, 50),
             v3!(0, 400, 0),
             v3!(0, 0, 300),
             light_right,
-        )
-        .hittable(),
-    );
+        ));
 
     // 5x5 grid of volume cubes
     // User labels grid (2,2) to (6,6) with center at (4,4)
@@ -85,14 +77,13 @@ fn main() {
             let rot_x = offset_row * rotation_scale;
             let rot_y = offset_col * rotation_scale;
 
-            world.add(
+            world = world.push(
                 Mesh::volume(
                     v3!(x, y, grid_z),
                     v3!(cube_size, cube_size, cube_size),
                     white.clone(),
                 )
-                .rotate(v3!(rot_x, rot_y, 0))
-                .hittable(),
+                .rotate(v3!(rot_x, rot_y, 0)),
             );
         }
     }
@@ -117,14 +108,13 @@ fn main() {
         let x = face_base_x + (i as f64) * face_spacing;
         let y = face_y;
 
-        world.add(
+        world = world.push(
             Mesh::volume(
                 v3!(x, y, grid_z),
                 v3!(cube_size, cube_size, cube_size),
                 white.clone(),
             )
-            .rotate(v3!(*rx, *ry, *rz))
-            .hittable(),
+            .rotate(v3!(*rx, *ry, *rz)),
         );
     }
 
@@ -140,7 +130,7 @@ fn main() {
             image_width: 800.,
             aspect_ratio: 1.0,
             max_bounces: 15.,
-            samples_per_pixel: 14. * 20.,
+            samples_per_pixel: 14. * 1.,
             background_color: v3!(0, 0, 0),
         },
     );

@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, io::BufWriter};
 
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::{Hitify, HittableList},
+    hittable_list::HittableList,
     material::{DiffuseLight, Lambertian, Materialify},
     mesh::Mesh,
     v3,
@@ -12,50 +12,60 @@ use std::sync::Arc;
 fn main() {
     let red = Lambertian::new(v3!(0.65, 0.05, 0.05)).materialify();
     let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
-    let green = Lambertian::new(v3!(0.12, 0.45, 0.15)).materialify();
-    let light = DiffuseLight::new(v3!(15, 15, 15)).materialify();
+    let green = Lambertian::new(v3!(0.12, 0.45, 0.15));
+    let light = DiffuseLight::new(v3!(15, 15, 15));
 
-    let mut world = HittableList::empty();
-
-    // right wall
-    world.add(Mesh::quad(v3!(555, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), green).hittable());
-    // light
-    world.add(Mesh::quad(v3!(343, 554, 332), v3!(-130, 0, 0), v3!(0, 0, -105), light).hittable());
-    // back wall
-    world.add(
-        Mesh::quad(
+    let world = HittableList::empty()
+        // right wall
+        .push(Mesh::quad(
+            v3!(555, 0, 0),
+            v3!(0, 555, 0),
+            v3!(0, 0, 555),
+            green,
+        ))
+        // light
+        .push(Mesh::quad(
+            v3!(343, 554, 332),
+            v3!(-130, 0, 0),
+            v3!(0, 0, -105),
+            light,
+        ))
+        // back wall
+        .push(Mesh::quad(
             v3!(0, 0, 555),
             v3!(555, 0, 0),
             v3!(0, 555, 0),
             white.clone(),
-        )
-        .hittable(),
-    );
-    // left wall
-    world.add(Mesh::quad(v3!(0, 0, 0), v3!(0, 555, 0), v3!(0, 0, 555), red.clone()).hittable());
-    // roof
-    world.add(
-        Mesh::quad(
+        ))
+        // left wall
+        .push(Mesh::quad(
+            v3!(0, 0, 0),
+            v3!(0, 555, 0),
+            v3!(0, 0, 555),
+            red.clone(),
+        ))
+        // roof
+        .push(Mesh::quad(
             v3!(555, 555, 555),
             v3!(-555, 0, 0),
             v3!(0, 0, -555),
             white.clone(),
+        ))
+        // floor
+        .push(Mesh::quad(
+            v3!(0, 0, 0),
+            v3!(555, 0, 0),
+            v3!(0, 0, 555),
+            white.clone(),
+        ))
+        .push(
+            Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone())
+                .rotate(v3!(0, -0.3, 0)),
         )
-        .hittable(),
-    );
-    // floor
-    world.add(Mesh::quad(v3!(0, 0, 0), v3!(555, 0, 0), v3!(0, 0, 555), white.clone()).hittable());
-
-    world.add(
-        Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone())
-            .rotate(v3!(0, -0.3, 0))
-            .hittable(),
-    );
-    world.add(
-        Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone())
-            .rotate(v3!(0, 0.3, 0))
-            .hittable(),
-    );
+        .push(
+            Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone())
+                .rotate(v3!(0, 0.3, 0)),
+        );
 
     let camera = Camera::new(
         CameraParameters {

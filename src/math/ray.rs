@@ -1,5 +1,4 @@
-use super::vec3::Vec3;
-use crate::Float;
+use super::{Float, vec3::Vec3};
 pub type Point3 = Vec3;
 
 #[derive(Default, Debug)]

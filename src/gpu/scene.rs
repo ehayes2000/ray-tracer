@@ -1,5 +1,7 @@
-use super::mesh::Mesh;
-use super::types::{Material, Triangle};
+use super::{
+    mesh::Mesh,
+    types::{Material, Triangle},
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct Scene {

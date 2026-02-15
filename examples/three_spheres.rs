@@ -1,26 +1,25 @@
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::{Hitify, HittableList},
-    material::{Dielectric, Lambertian, Materialify, Metal},
+    hittable_list::HittableList,
+    material::{Dielectric, Lambertian, Metal},
     math::Vec3,
     sphere::Sphere,
     v3,
 };
 
 fn main() {
-    let ground = Lambertian::new(Vec3(0.8, 0.8, 0.0)).materialify();
-    let left = Dielectric::new(1.5).materialify();
-    let bubble = Dielectric::new(1.0 / 1.5).materialify();
-    let center = Lambertian::new(Vec3(0.1, 0.2, 0.5)).materialify();
-    let right = Metal::new(Vec3(0.8, 0.6, 0.2), 1.0).materialify();
+    let ground = Lambertian::new(Vec3(0.8, 0.8, 0.0));
+    let left = Dielectric::new(1.5);
+    let bubble = Dielectric::new(1.0 / 1.5);
+    let center = Lambertian::new(Vec3(0.1, 0.2, 0.5));
+    let right = Metal::new(Vec3(0.8, 0.6, 0.2), 1.0);
 
-    let mut world = HittableList::empty();
-
-    world.add(Sphere::new(Vec3(0., 0., -1.2), 0.5, center).hittable());
-    world.add(Sphere::new(Vec3(1.0, 0., -1.), 0.5, right).hittable());
-    world.add(Sphere::new(Vec3(-1.0, 0., -1.), 0.5, left).hittable());
-    world.add(Sphere::new(Vec3(-1.0, 0., -1.), 0.4, bubble).hittable());
-    world.add(Sphere::new(Vec3(0., -100.5, -1.), 100., ground).hittable());
+    let world = HittableList::empty()
+        .push(Sphere::new(Vec3(0., 0., -1.2), 0.5, center))
+        .push(Sphere::new(Vec3(1.0, 0., -1.), 0.5, right))
+        .push(Sphere::new(Vec3(-1.0, 0., -1.), 0.5, left))
+        .push(Sphere::new(Vec3(-1.0, 0., -1.), 0.4, bubble))
+        .push(Sphere::new(Vec3(0., -100.5, -1.), 100., ground));
     let bvh = world.into_bvh();
 
     let rparams = RenderParameters::default();

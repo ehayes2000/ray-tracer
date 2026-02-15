@@ -1,5 +1,4 @@
-use crate::math::Vec3;
-use crate::v3;
+use crate::{math::Vec3, v3};
 use encase::ShaderType;
 
 #[derive(Clone, Debug, ShaderType, Default)]

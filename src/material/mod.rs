@@ -8,10 +8,11 @@ pub use diffuse_light::DiffuseLight;
 pub use lambertian::Lambertian;
 pub use metal::Metal;
 
-use crate::hittable::HitRecord;
-use crate::math::Color;
-use crate::math::Point;
-use crate::math::Ray;
+use crate::{
+    hit::HitRecord,
+    math::{Color, Point, Ray},
+};
+
 use std::sync::Arc;
 
 pub struct Scatter {
@@ -33,5 +34,11 @@ pub trait Materialify {
 impl<T: Material> Materialify for T {
     fn materialify(self) -> Arc<dyn Material> {
         Arc::new(self)
+    }
+}
+
+impl Materialify for Arc<dyn Material> {
+    fn materialify(self) -> Arc<dyn Material> {
+        self
     }
 }

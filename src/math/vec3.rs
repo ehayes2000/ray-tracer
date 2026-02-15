@@ -1,9 +1,10 @@
-use super::Axis;
-use crate::Float;
+use super::{Axis, Float};
 #[cfg(feature = "gpu")]
 use encase::impl_vector;
-use std::fmt::Display;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
 use super::util::{random, random_float};
 
@@ -16,9 +17,9 @@ pub type Color = Vec3;
 macro_rules! v3 {
     ($x:expr, $y:expr, $z:expr) => {
         $crate::math::Vec3(
-            $x as $crate::Float,
-            $y as $crate::Float,
-            $z as $crate::Float,
+            $x as $crate::math::Float,
+            $y as $crate::math::Float,
+            $z as $crate::math::Float,
         )
     };
 }

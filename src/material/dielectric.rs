@@ -1,10 +1,8 @@
-use super::Material;
-use super::Scatter;
-use crate::Float;
-use crate::hittable::HitRecord;
-use crate::math::Ray;
-use crate::math::random;
-use crate::math::{Vec3, dot, unit_vector};
+use super::{Material, Scatter};
+use crate::{
+    hit::HitRecord,
+    math::{Float, Ray, Vec3, dot, random, unit_vector},
+};
 
 pub struct Dielectric {
     refraction_index: Float,

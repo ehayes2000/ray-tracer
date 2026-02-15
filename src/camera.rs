@@ -1,17 +1,13 @@
-use std::default::Default;
-use std::io::Write;
-use std::sync::Arc;
+use std::{default::Default, io::Write, sync::Arc};
 
-use crate::Float;
-use crate::color::to_8bit;
-use crate::hittable::Hit;
-use crate::math::Interval;
-use crate::math::Ray;
-use crate::math::degrees_to_radians;
-use crate::math::random;
-use crate::math::{Color, Point, Vec3};
-use crate::math::{cross, unit_vector};
-use crate::v3;
+use crate::{
+    color::to_8bit,
+    hit::Hit,
+    math::{
+        Color, Float, Interval, Point, Ray, Vec3, cross, degrees_to_radians, random, unit_vector,
+    },
+    v3,
+};
 
 #[derive(Debug, Clone)]
 pub struct CameraParameters {

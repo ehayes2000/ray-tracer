@@ -1,7 +1,8 @@
 pub use super::{Material, Scatter};
-use crate::hittable::HitRecord;
-use crate::math::Ray;
-use crate::math::{Color, Vec3};
+use crate::{
+    hit::HitRecord,
+    math::{Color, Ray, Vec3},
+};
 use std::sync::Arc;
 
 pub struct Lambertian {

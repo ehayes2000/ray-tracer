@@ -1,8 +1,8 @@
-use super::Material;
-use super::Scatter;
-use crate::Float;
-use crate::math::Ray;
-use crate::math::{Color, Vec3, dot, unit_vector};
+use super::{Material, Scatter};
+use crate::{
+    hit::HitRecord,
+    math::{Color, Float, Ray, Vec3, dot, unit_vector},
+};
 
 pub struct Metal {
     albedo: Color,
@@ -16,7 +16,7 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray_in: &Ray, hit: &crate::hittable::HitRecord) -> Option<Scatter> {
+    fn scatter(&self, ray_in: &Ray, hit: &HitRecord) -> Option<Scatter> {
         let reflected = ray_in.direction.reflect(&hit.normal);
         let reflected = unit_vector(&reflected) + (self.roughness * Vec3::unit_random());
         let ray = Ray {

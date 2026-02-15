@@ -1,8 +1,8 @@
-use super::hittable::{Hit, HitRecord};
-use super::material::Material;
-use super::math::Interval;
-use super::math::{Point, Ray, Vec3, dot};
-use crate::Float;
+use super::{
+    hit::*,
+    material::{Material, Materialify},
+    math::{Float, Interval, Point, Ray, Vec3, dot},
+};
 use crate::aabb::Aabb;
 use std::sync::Arc;
 
@@ -14,13 +14,13 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: Float, material: Arc<dyn Material>) -> Self {
+    pub fn new(center: Point, radius: Float, material: impl Materialify) -> Self {
         let rvec = Vec3(radius, radius, radius);
         let bbox = Aabb::from_corners(center - rvec, center + rvec);
         Self {
             center,
             radius,
-            material,
+            material: material.materialify(),
             bbox,
         }
     }
@@ -72,6 +72,6 @@ impl Hit for Sphere {
 #[macro_export]
 macro_rules! ball {
     ($pt:expr, $r:expr, $m:expr) => {
-        std::sync::Arc::new(Sphere::new($pt, $r, $m))
+        Sphere::new($pt, $r, $m)
     };
 }

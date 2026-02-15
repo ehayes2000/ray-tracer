@@ -1,4 +1,4 @@
-use crate::Float;
+use super::Float;
 use rand::Rng;
 
 #[allow(clippy::unnecessary_cast)]

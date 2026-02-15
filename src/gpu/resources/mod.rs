@@ -9,8 +9,7 @@ use crate::gpu::{
     bvh::{BvhShaderArray, BvhShaderNode},
     types::{Material, RenderParameters, SceneBufferEntry, Triangle},
 };
-use encase::ShaderType;
-use encase::internal::WriteInto;
+use encase::{ShaderType, internal::WriteInto};
 
 pub struct Resources {
     bvh: wgpu::Buffer,

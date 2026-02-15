@@ -1,18 +1,17 @@
 use ray_tracer::{
-    Float, ball,
+    ball,
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::HittableList,
+    hittable_list::HittableList,
     material::{Dielectric, Lambertian, Materialify, Metal},
-    math::{Vec3, random, random_float},
+    math::{Float, Vec3, random, random_float},
     sphere::Sphere,
     v3,
 };
 use std::sync::Arc;
 
 fn main() {
-    let mut world = HittableList::empty();
-    let ground_m = Lambertian::new(v3!(0.5, 0.5, 0.5)).materialify();
-    world.add(ball!(v3!(0, -1000, 0), 1000., ground_m));
+    let ground_m = Lambertian::new(v3!(0.5, 0.5, 0.5));
+    let mut world = HittableList::empty().push(ball!(v3!(0, -1000, 0), 1000., ground_m));
     for a in -11..11 {
         let a = a as Float;
         for b in -11..11 {
@@ -30,21 +29,22 @@ fn main() {
                 } else {
                     Dielectric::new(1.5).materialify()
                 };
-                world.add(ball!(center, 0.2, material))
+                world = world.push(ball!(center, 0.2, material));
             }
         }
     }
-    world.add(ball!(v3!(0, 1, 0), 1.0, Dielectric::new(1.5).materialify()));
-    world.add(ball!(
-        v3!(-4, 1, 0),
-        1.0,
-        Lambertian::new(v3!(0.4, 0.2, 0.1)).materialify()
-    ));
-    world.add(ball!(
-        v3!(4, 1, 0),
-        1.0,
-        Metal::new(v3!(0.7, 0.6, 0.5), 0.0).materialify()
-    ));
+    let world = world
+        .push(ball!(v3!(0, 1, 0), 1.0, Dielectric::new(1.5)))
+        .push(ball!(
+            v3!(-4, 1, 0),
+            1.0,
+            Lambertian::new(v3!(0.4, 0.2, 0.1))
+        ))
+        .push(ball!(
+            v3!(4, 1, 0),
+            1.0,
+            Metal::new(v3!(0.7, 0.6, 0.5), 0.0)
+        ));
     let render_params = RenderParameters {
         aspect_ratio: 16. / 9.,
         image_width: 1200.,

@@ -1,9 +1,6 @@
 //! axis aligned bounding box
 
-use crate::{
-    EPSILON,
-    math::{Axis, Interval, Point, Ray, Vec3},
-};
+use crate::math::{Axis, EPSILON, Interval, Point, Ray, Vec3};
 
 #[derive(Clone, Debug)]
 pub struct Aabb {

@@ -1,8 +1,7 @@
-use crate::Float;
 use crate::math::Color;
 use std::io::Write;
 
-use crate::math::Interval;
+use crate::math::{Float, Interval};
 
 static INTENSITY: Interval = Interval {
     min: 0.0,

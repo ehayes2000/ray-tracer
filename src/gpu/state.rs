@@ -1,14 +1,13 @@
-use super::bvh::build_shader_bvh;
-use super::mesh::Mesh;
-use super::scene::Scene;
+use super::{bvh::build_shader_bvh, mesh::Mesh, scene::Scene};
 use std::{iter, sync::Arc};
 use wgpu::{FragmentState, VertexState};
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};
 
 use super::types::{Material, RenderParameters, SceneBufferEntry, Sphere};
-use crate::gpu::resources::Resources;
-use crate::gpu::types::MaterialKind;
-use crate::v3;
+use crate::{
+    gpu::{resources::Resources, types::MaterialKind},
+    v3,
+};
 
 pub struct State {
     pub surface: wgpu::Surface<'static>,

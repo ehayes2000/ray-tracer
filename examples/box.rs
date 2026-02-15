@@ -2,67 +2,52 @@ use std::io::BufWriter;
 
 use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::{Hitify, HittableList},
-    material::{Lambertian, Materialify},
+    hittable_list::HittableList,
+    material::Lambertian,
     mesh::Mesh,
     v3,
 };
 
 fn main() {
     // Materials
-    let left_red = Lambertian::new(v3!(1.0, 0.2, 0.2)).materialify();
-    let back_green = Lambertian::new(v3!(0.2, 1.0, 0.2)).materialify();
-    let right_blue = Lambertian::new(v3!(0.2, 0.2, 1.0)).materialify();
-    let upper_orange = Lambertian::new(v3!(1.0, 0.5, 0.0)).materialify();
-    let lower_teal = Lambertian::new(v3!(0.2, 0.8, 0.8)).materialify();
+    let left_red = Lambertian::new(v3!(1.0, 0.2, 0.2));
+    let back_green = Lambertian::new(v3!(0.2, 1.0, 0.2));
+    let right_blue = Lambertian::new(v3!(0.2, 0.2, 1.0));
+    let upper_orange = Lambertian::new(v3!(1.0, 0.5, 0.0));
+    let lower_teal = Lambertian::new(v3!(0.2, 0.8, 0.8));
 
     // Quads
-    let mut world = HittableList::empty();
-    world.add(
-        Mesh::quad(
+    let world = HittableList::empty()
+        .push(Mesh::quad(
             v3!(-3.0, -2.0, 5.0),
             v3!(0.0, 0.0, -4.0),
             v3!(0.0, 4.0, 0.0),
             left_red,
-        )
-        .hittable(),
-    );
-    world.add(
-        Mesh::quad(
+        ))
+        .push(Mesh::quad(
             v3!(-2.0, -2.0, 0.0),
             v3!(4.0, 0.0, 0.0),
             v3!(0.0, 4.0, 0.0),
             back_green,
-        )
-        .hittable(),
-    );
-    world.add(
-        Mesh::quad(
+        ))
+        .push(Mesh::quad(
             v3!(3.0, -2.0, 1.0),
             v3!(0.0, 0.0, 4.0),
             v3!(0.0, 4.0, 0.0),
             right_blue,
-        )
-        .hittable(),
-    );
-    world.add(
-        Mesh::quad(
+        ))
+        .push(Mesh::quad(
             v3!(-2.0, 3.0, 1.0),
             v3!(4.0, 0.0, 0.0),
             v3!(0.0, 0.0, 4.0),
             upper_orange,
-        )
-        .hittable(),
-    );
-    world.add(
-        Mesh::quad(
+        ))
+        .push(Mesh::quad(
             v3!(-2.0, -3.0, 5.0),
             v3!(4.0, 0.0, 0.0),
             v3!(0.0, 0.0, -4.0),
             lower_teal,
-        )
-        .hittable(),
-    );
+        ));
 
     let cparams = CameraParameters {
         vfov: 80.0,

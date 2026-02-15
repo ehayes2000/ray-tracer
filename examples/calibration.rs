@@ -1,20 +1,20 @@
 use ray_tracer::{
-    Float, ball,
+    ball,
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable::HittableList,
-    material::{Lambertian, Materialify},
+    hittable_list::HittableList,
+    material::Lambertian,
+    math::Float,
     sphere::Sphere,
     v3,
 };
 
 fn main() {
     let r = Float::cos((std::f64::consts::PI / 4.0) as Float);
-    let mat_l = Lambertian::new(v3!(0, 0, 1)).materialify();
-    let mat_r = Lambertian::new(v3!(1, 0, 0)).materialify();
-    let mut world = HittableList::empty();
-
-    world.add(ball!(v3!(-r, 0, -1), r, mat_l));
-    world.add(ball!(v3!(r, 0, -1), r, mat_r));
+    let mat_l = Lambertian::new(v3!(0, 0, 1));
+    let mat_r = Lambertian::new(v3!(1, 0, 0));
+    let world = HittableList::empty()
+        .push(ball!(v3!(-r, 0, -1), r, mat_l))
+        .push(ball!(v3!(r, 0, -1), r, mat_r));
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {

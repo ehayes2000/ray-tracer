@@ -1,7 +1,8 @@
 use crate::{
     aabb::Aabb,
-    hittable::{Hit, Hitify, HittableList},
-    math::Interval,
+    hit::*,
+    hittable_list::{Hitify, HittableList},
+    math::{Interval, Ray},
 };
 use std::sync::Arc;
 
@@ -21,11 +22,7 @@ impl Hit for EmptyPartition {
     fn bounding_box(&self) -> &Aabb {
         &self.0
     }
-    fn hit(
-        &self,
-        _: &crate::math::Ray,
-        _: &crate::math::Interval,
-    ) -> Option<crate::hittable::HitRecord> {
+    fn hit(&self, _: &Ray, _: &Interval) -> Option<HitRecord> {
         None
     }
 }
@@ -47,7 +44,7 @@ impl BvhNode {
 
     fn recursive_build(objects: Vec<Arc<dyn Hit>>) -> NodeOrHittable {
         if objects.is_empty() {
-            return NodeOrHittable::Hittable(EmptyPartition::new().hittable());
+            return NodeOrHittable::Hittable(EmptyPartition::new().hitify());
         } else if objects.len() == 1 {
             return NodeOrHittable::Hittable(objects[0].clone());
         }
@@ -62,7 +59,7 @@ impl BvhNode {
         let midpoint = bbox_centroid[partition_axis].center();
         // coplaner objects cannot be partitioned
         if bbox_centroid[partition_axis].size() == 0. {
-            return NodeOrHittable::Hittable(HittableList::new(objects, bbox).hittable());
+            return NodeOrHittable::Hittable(HittableList::new(objects, bbox).hitify());
         }
         let (left, right) =
             objects
@@ -104,11 +101,7 @@ impl Hit for BvhNode {
         &self.bbox
     }
 
-    fn hit(
-        &self,
-        r: &crate::math::Ray,
-        ray_t: &crate::math::Interval,
-    ) -> Option<crate::hittable::HitRecord> {
+    fn hit(&self, r: &crate::math::Ray, ray_t: &crate::math::Interval) -> Option<HitRecord> {
         self.bbox.hit(r, ray_t)?;
         let lhit = self.left.hit(r, ray_t);
 
@@ -145,7 +138,7 @@ impl Hit for NodeOrHittable {
         &self,
         r: &crate::math::Ray,
         ray_t: &crate::math::Interval,
-    ) -> Option<crate::hittable::HitRecord> {
+    ) -> Option<crate::hit::HitRecord> {
         match self {
             Self::Node(n) => n.hit(r, ray_t),
             Self::Hittable(h) => h.hit(r, ray_t),
@@ -156,13 +149,12 @@ impl Hit for NodeOrHittable {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Float;
-    use crate::material::Lambertian;
-    use crate::material::Materialify;
-    use crate::math::Interval;
-    use crate::math::Ray;
-    use crate::mesh::Mesh;
-    use crate::{ray, v3};
+    use crate::{
+        material::{Lambertian, Materialify},
+        math::{Float, Interval, Ray},
+        mesh::Mesh,
+        ray, v3,
+    };
 
     // bvh is falsly detecting hits on quads. The false positive is not consistent and some light still gets through
     // test with 2 planes
@@ -179,14 +171,14 @@ mod test {
                 v3!(0, 1000, 0),
                 material.clone(),
             )
-            .hittable(),
+            .hitify(),
             Mesh::quad(
                 v3!(10, 10, 0),
                 v3!(10, 0, 0),
                 v3!(0, 10, 0),
                 material.clone(),
             )
-            .hittable(),
+            .hitify(),
         ];
         let look_from = v3!(15, 15, -10);
         let ray = Ray {

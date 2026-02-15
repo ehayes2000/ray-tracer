@@ -1,5 +1,8 @@
 use super::Material;
-use crate::math::Color;
+use crate::{
+    hit::HitRecord,
+    math::{Color, Ray},
+};
 
 pub struct DiffuseLight {
     pub color: Color,
@@ -16,11 +19,7 @@ impl Material for DiffuseLight {
         self.color
     }
 
-    fn scatter(
-        &self,
-        _: &crate::math::Ray,
-        _: &crate::hittable::HitRecord,
-    ) -> Option<super::Scatter> {
+    fn scatter(&self, _: &Ray, _: &HitRecord) -> Option<super::Scatter> {
         None
     }
 }

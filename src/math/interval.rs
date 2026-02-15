@@ -1,4 +1,4 @@
-use crate::Float;
+use super::Float;
 
 #[derive(Debug, Clone)]
 pub struct Interval {

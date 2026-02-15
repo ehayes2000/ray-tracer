@@ -3,14 +3,14 @@ mod volume;
 
 use anyhow::{Result, anyhow};
 use obj::{Obj, load_obj};
-use std::sync::Arc;
-use std::{fs::File, io::BufReader};
+use std::{fs::File, io::BufReader, sync::Arc};
 
-use crate::Float;
-use crate::aabb::Aabb;
-use crate::hittable::{Hit, HitRecord};
-use crate::material::Material;
-use crate::math::{Interval, Point, Ray, Vec3, cross, dot};
+use crate::{
+    aabb::Aabb,
+    hit::*,
+    material::{Material, Materialify},
+    math::{Float, Interval, Point, Ray, Vec3, cross, dot},
+};
 
 // counter-clockwise winding front
 pub struct Triangle {
@@ -41,7 +41,8 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn try_from_file(path: &str, material: Arc<dyn Material>) -> Result<Self> {
+    pub fn try_from_file(path: &str, material: impl Materialify) -> Result<Self> {
+        let material = material.materialify();
         let buf = BufReader::new(File::open(path)?);
         let obj: Obj = load_obj(buf)?;
 
@@ -200,7 +201,7 @@ impl Mesh {
         let ray_cross_e2 = cross(r.direction, e2);
         let det = dot(&e1, &ray_cross_e2);
 
-        if det > -crate::EPSILON && det < crate::EPSILON {
+        if det > -crate::math::EPSILON && det < crate::math::EPSILON {
             return None;
         }
 
@@ -224,7 +225,7 @@ impl Mesh {
             -outward_normal
         };
         let t = inv_det * dot(&e2, &s_cross_e1);
-        if t > crate::EPSILON {
+        if t > crate::math::EPSILON {
             let intersection_point = r.origin + r.direction * t;
             Some(HitRecord {
                 front_face,
@@ -263,6 +264,5 @@ macro_rules! mesh {
         let base = std::path::Path::new(file!()).parent().unwrap();
         let full_path = base.join($path);
         $crate::mesh::Mesh::try_from_file(full_path.to_str().unwrap(), $material)
-            .map(|mesh| mesh.into_hittable())
     }};
 }
