@@ -3,18 +3,17 @@ use ray_tracer::{
     hittable_list::HittableList,
     material::{Lambertian, Metal},
     math::Vec3,
-    mesh,
     sphere::Sphere,
-    v3,
+    static_mesh, v3,
 };
 
 fn main() {
-    let ground = Lambertian::new(Vec3(0.8, 0.8, 0.0));
+    let groun = Lambertian::new(Vec3(0.8, 0.8, 0.0));
     let metal = Metal::new(Vec3(0.8, 0.6, 0.2), 1.0);
 
     let world = HittableList::empty()
-        .push(mesh!("dk.obj", metal).expect("load mesh"))
-        .push(Sphere::new(Vec3(0., -10000., -1.), 10000., ground));
+        .push(static_mesh!("dk.obj", &metal))
+        .push(Sphere::as_static(Vec3(0., -10000., -1.), 10000., &ground));
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {

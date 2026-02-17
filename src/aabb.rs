@@ -10,7 +10,7 @@ pub struct Aabb {
 }
 
 impl Aabb {
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self {
             x: Interval::empty(),
             y: Interval::empty(),
@@ -18,11 +18,11 @@ impl Aabb {
         }
     }
 
-    pub fn new(x: Interval, y: Interval, z: Interval) -> Self {
+    pub const fn new(x: Interval, y: Interval, z: Interval) -> Self {
         Self { x, y, z }
     }
 
-    pub fn from_corners(a: Point, b: Point) -> Self {
+    pub const fn from_corners(a: Point, b: Point) -> Self {
         let x = if a.0 < b.0 {
             Interval::new(a.0, b.0)
         } else {
@@ -44,7 +44,7 @@ impl Aabb {
         Self { x, y, z }
     }
 
-    pub fn union_pt(mut self, pt: &Point) -> Self {
+    pub const fn union_pt(mut self, pt: &Point) -> Self {
         self.x.max = self.x.max.max(pt.0);
         self.x.min = self.x.min.min(pt.0);
         self.y.max = self.y.max.max(pt.1);
@@ -54,14 +54,14 @@ impl Aabb {
         self
     }
 
-    pub fn union(mut self, other: &Self) -> Self {
+    pub const fn union(mut self, other: &Self) -> Self {
         self.x = self.x.union(&other.x);
         self.y = self.y.union(&other.y);
         self.z = self.z.union(&other.z);
         self
     }
 
-    pub fn pad(mut self) -> Self {
+    pub const fn pad(mut self) -> Self {
         if self.x.size() < EPSILON {
             self.x = self.x.expand(EPSILON);
         }

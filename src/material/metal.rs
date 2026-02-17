@@ -10,7 +10,7 @@ pub struct Metal {
 }
 
 impl Metal {
-    pub fn new(albedo: Color, roughness: Float) -> Self {
+    pub const fn new(albedo: Color, roughness: Float) -> Self {
         Self { albedo, roughness }
     }
 }

@@ -30,7 +30,10 @@ impl Debug for HittableList {
 }
 
 impl HittableList {
-    pub fn new(objects: Vec<Arc<dyn Hit>>, bbox: Aabb) -> Self {
+    pub fn new(objects: Vec<Arc<dyn Hit>>) -> Self {
+        let bbox = objects
+            .iter()
+            .fold(Aabb::empty(), |acc, o| acc.union(o.bounding_box()));
         Self { bbox, objects }
     }
     pub fn empty() -> Self {

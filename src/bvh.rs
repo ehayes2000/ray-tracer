@@ -59,7 +59,7 @@ impl BvhNode {
         let midpoint = bbox_centroid[partition_axis].center();
         // coplaner objects cannot be partitioned
         if bbox_centroid[partition_axis].size() == 0. {
-            return NodeOrHittable::Hittable(HittableList::new(objects, bbox).hitify());
+            return NodeOrHittable::Hittable(HittableList::new(objects).hitify());
         }
         let (left, right) =
             objects
@@ -134,11 +134,7 @@ impl Hit for NodeOrHittable {
         }
     }
 
-    fn hit(
-        &self,
-        r: &crate::math::Ray,
-        ray_t: &crate::math::Interval,
-    ) -> Option<crate::hit::HitRecord> {
+    fn hit(&self, r: &crate::math::Ray, ray_t: &Interval) -> Option<HitRecord> {
         match self {
             Self::Node(n) => n.hit(r, ray_t),
             Self::Hittable(h) => h.hit(r, ray_t),
