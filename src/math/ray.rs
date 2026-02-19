@@ -9,10 +9,6 @@ pub struct Ray {
 
 // constructors
 impl Ray {
-    pub fn new() -> Self {
-        Self::zero()
-    }
-
     pub fn zero() -> Self {
         Self {
             origin: Point3::zero(),

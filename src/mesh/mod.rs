@@ -1,4 +1,5 @@
 mod quad;
+mod triangle;
 mod volume;
 
 use anyhow::{Result, anyhow};
@@ -9,15 +10,10 @@ use crate::{
     aabb::Aabb,
     hit::*,
     material::{Material, Materialify},
-    math::{Float, Interval, Point, Ray, Vec3, cross, dot},
+    math::{Float, Interval, Ray, Vec3},
 };
 
-// counter-clockwise winding front
-pub struct Triangle {
-    pub a: Point,
-    pub b: Point,
-    pub c: Point,
-}
+use triangle::Triangle;
 
 #[macro_export]
 macro_rules! tri {
@@ -35,9 +31,9 @@ pub struct Vertex {
 }
 
 pub struct Mesh {
-    tris: Vec<Triangle>,
-    material: Arc<dyn Material>,
-    bbox: Aabb,
+    pub tris: Vec<Triangle>,
+    pub material: Arc<dyn Material>,
+    pub bbox: Aabb,
 }
 
 impl Mesh {
@@ -192,59 +188,11 @@ impl Mesh {
     }
 }
 
-impl Mesh {
-    fn moller_trumbore_intersection(&self, i: usize, r: &Ray) -> Option<HitRecord> {
-        let tri = &self.tris[i];
-        let e1 = tri.b - tri.a;
-        let e2 = tri.c - tri.a;
-
-        let ray_cross_e2 = cross(r.direction, e2);
-        let det = dot(&e1, &ray_cross_e2);
-
-        if det > -crate::math::EPSILON && det < crate::math::EPSILON {
-            return None;
-        }
-
-        let inv_det = 1.0 / det;
-        let s = r.origin - tri.a;
-        let u = inv_det * dot(&s, &ray_cross_e2);
-        if !(0.0..1.0).contains(&u) {
-            return None;
-        }
-
-        let s_cross_e1 = cross(s, e1);
-        let v = inv_det * dot(&r.direction, &s_cross_e1);
-        if v < 0.0 || u + v > 1.0 {
-            return None;
-        }
-        let outward_normal = cross(e1, e2).normalize();
-        let front_face = dot(&r.direction, &outward_normal) < 0.0;
-        let normal = if front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
-        let t = inv_det * dot(&e2, &s_cross_e1);
-        if t > crate::math::EPSILON {
-            let intersection_point = r.origin + r.direction * t;
-            Some(HitRecord {
-                front_face,
-                material: self.material.clone(),
-                normal,
-                p: intersection_point,
-                t,
-            })
-        } else {
-            None
-        }
-    }
-}
-
 impl Hit for Mesh {
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let mut best_hit = None::<HitRecord>;
-        for i in 0..self.tris.len() {
-            if let Some(hit) = self.moller_trumbore_intersection(i, r)
+        for tri in &self.tris {
+            if let Some(hit) = tri.tri_hit(r, ray_t, &self.material)
                 && ray_t.surrounds(hit.t)
                 && hit.t < best_hit.as_ref().map(|h| h.t).unwrap_or(Float::MAX)
             {
@@ -259,10 +207,9 @@ impl Hit for Mesh {
 }
 
 #[macro_export]
-macro_rules! mesh {
+macro_rules! mesh_obj {
     ($path:expr, $material:expr) => {{
-        let base = std::path::Path::new(file!()).parent().unwrap();
-        let full_path = base.join($path);
+        let full_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join($path);
         $crate::mesh::Mesh::try_from_file(full_path.to_str().unwrap(), $material)
     }};
 }

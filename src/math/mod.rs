@@ -11,4 +11,4 @@ pub use util::*;
 pub use vec3::*;
 
 pub type Float = f64;
-pub const EPSILON: Float = 0.001;
+pub const EPSILON: Float = 0.000001;

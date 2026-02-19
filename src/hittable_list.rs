@@ -1,6 +1,6 @@
 use crate::{
     aabb::Aabb,
-    bvh::BvhNode,
+    bvh::Bvh,
     hit::*,
     math::{Interval, Ray},
 };
@@ -53,8 +53,8 @@ impl HittableList {
         self
     }
 
-    pub fn into_bvh(self) -> BvhNode {
-        BvhNode::from_objects(self.objects)
+    pub fn into_bvh(self) -> Bvh {
+        Bvh::from_objects(self.objects)
     }
 }
 

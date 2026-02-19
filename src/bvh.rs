@@ -6,8 +6,7 @@ use crate::{
 };
 use std::sync::Arc;
 
-#[derive(Clone)]
-enum NodeOrHittable {
+pub enum Bvh {
     Node(Arc<BvhNode>),
     Hittable(Arc<dyn Hit>),
 }
@@ -27,26 +26,22 @@ impl Hit for EmptyPartition {
     }
 }
 
-pub struct BvhNode {
-    left: NodeOrHittable,
-    right: NodeOrHittable,
+struct BvhNode {
+    left: Bvh,
+    right: Bvh,
     bbox: Aabb,
 }
 
-impl BvhNode {
+impl Bvh {
     pub fn from_objects(objects: Vec<Arc<dyn Hit>>) -> Self {
-        if let NodeOrHittable::Node(node) = Self::recursive_build(objects) {
-            Arc::into_inner(node).expect("concrete type")
-        } else {
-            panic!("expected tree");
-        }
+        Self::recursive_build(objects)
     }
 
-    fn recursive_build(objects: Vec<Arc<dyn Hit>>) -> NodeOrHittable {
+    fn recursive_build(objects: Vec<Arc<dyn Hit>>) -> Bvh {
         if objects.is_empty() {
-            return NodeOrHittable::Hittable(EmptyPartition::new().hitify());
+            return Bvh::Hittable(EmptyPartition::new().hitify());
         } else if objects.len() == 1 {
-            return NodeOrHittable::Hittable(objects[0].clone());
+            return Bvh::Hittable(objects[0].clone());
         }
         let bbox = objects
             .iter()
@@ -59,7 +54,7 @@ impl BvhNode {
         let midpoint = bbox_centroid[partition_axis].center();
         // coplaner objects cannot be partitioned
         if bbox_centroid[partition_axis].size() == 0. {
-            return NodeOrHittable::Hittable(HittableList::new(objects).hitify());
+            return Bvh::Hittable(HittableList::new(objects).hitify());
         }
         let (left, right) =
             objects
@@ -73,26 +68,11 @@ impl BvhNode {
                     (left, right)
                 });
 
-        NodeOrHittable::Node(Arc::new(Self {
+        Bvh::Node(Arc::new(BvhNode {
             bbox,
             left: Self::recursive_build(left),
             right: Self::recursive_build(right),
         }))
-    }
-
-    pub fn log_bboxes(&self) {
-        match &self.left {
-            NodeOrHittable::Hittable(h) => {
-                println!("Obj {:?}", h.bounding_box())
-            }
-            NodeOrHittable::Node(n) => n.log_bboxes(),
-        }
-        match &self.right {
-            NodeOrHittable::Hittable(h) => {
-                println!("Obj {:?}", h.bounding_box())
-            }
-            NodeOrHittable::Node(n) => n.log_bboxes(),
-        }
     }
 }
 
@@ -126,7 +106,7 @@ impl Hit for BvhNode {
     }
 }
 
-impl Hit for NodeOrHittable {
+impl Hit for Bvh {
     fn bounding_box(&self) -> &Aabb {
         match self {
             Self::Node(n) => n.bounding_box(),
@@ -199,7 +179,7 @@ mod test {
                 .is_none()
         );
 
-        let bvh = BvhNode::from_objects(objects.clone());
+        let bvh = Bvh::from_objects(objects.clone());
         let hit = bvh.hit(&ray, &Interval::new(Float::MIN, Float::MAX));
         assert!(hit.is_some());
         assert_eq!(hit.unwrap().p, v3!(15, 15, 0));

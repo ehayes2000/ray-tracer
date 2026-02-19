@@ -16,7 +16,7 @@ impl Interval {
 
     pub const fn full() -> Self {
         Self {
-            min: Float::MIN,
+            min: 0.0,
             max: Float::MAX,
         }
     }

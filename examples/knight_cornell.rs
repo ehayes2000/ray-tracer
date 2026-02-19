@@ -4,9 +4,8 @@ use ray_tracer::{
     camera::{Camera, CameraParameters, RenderParameters},
     hittable_list::{Hitify, HittableList},
     material::{Dielectric, DiffuseLight, Lambertian, Materialify},
-    mesh,
     mesh::Mesh,
-    v3,
+    mesh_obj, v3,
 };
 
 fn main() {
@@ -43,7 +42,7 @@ fn main() {
     ];
 
     objects.push(
-        mesh!("../models/chess_knight.obj", glass)
+        mesh_obj!("../models/chess_knight.obj", glass)
             .expect("knight")
             .scale(250.)
             .translate(v3!(225, 125, 200))
