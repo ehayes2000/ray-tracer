@@ -15,12 +15,11 @@ fn main() {
     let right = Metal::new(Vec3(0.8, 0.6, 0.2), 1.0);
 
     let world = HittableList::empty()
-        .push(Sphere::new(Vec3(0., 0., -1.2), 0.5, center))
-        .push(Sphere::new(Vec3(1.0, 0., -1.), 0.5, right))
-        .push(Sphere::new(Vec3(-1.0, 0., -1.), 0.5, left))
-        .push(Sphere::new(Vec3(-1.0, 0., -1.), 0.4, bubble))
-        .push(Sphere::new(Vec3(0., -100.5, -1.), 100., ground));
-    let bvh = world.into_bvh();
+        .push(Box::new(Sphere::new(Vec3(0., 0., -1.2), 0.5, center)))
+        .push(Box::new(Sphere::new(Vec3(1.0, 0., -1.), 0.5, right)))
+        .push(Box::new(Sphere::new(Vec3(-1.0, 0., -1.), 0.5, left)))
+        .push(Box::new(Sphere::new(Vec3(-1.0, 0., -1.), 0.4, bubble)))
+        .push(Box::new(Sphere::new(Vec3(0., -100.5, -1.), 100., ground)));
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {
@@ -35,8 +34,9 @@ fn main() {
     let output_file = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(true)
         .open("three_spheres.ppm")
         .expect("three_spheres.ppm");
     let mut writer = std::io::BufWriter::new(output_file);
-    cam.render_multi(14, &mut writer, std::sync::Arc::new(bvh));
+    cam.render_multi(14, &mut writer, std::sync::Arc::new(world));
 }

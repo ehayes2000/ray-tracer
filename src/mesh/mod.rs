@@ -1,6 +1,7 @@
 mod quad;
 mod triangle;
 mod volume;
+pub use triangle::*;
 
 use anyhow::{Result, anyhow};
 use obj::{Obj, load_obj};
@@ -8,21 +9,14 @@ use std::{fs::File, io::BufReader, sync::Arc};
 
 use crate::{
     aabb::Aabb,
-    hit::*,
     material::{Material, Materialify},
-    math::{Float, Interval, Ray, Vec3},
+    math::{Float, Vec3},
 };
-
-use triangle::Triangle;
 
 #[macro_export]
 macro_rules! tri {
-    ($a:expr, $b:expr, $c:expr) => {
-        $crate::mesh::Triangle {
-            a: $a,
-            b: $b,
-            c: $c,
-        }
+    ($a:expr, $b:expr, $c:expr, $m:expr) => {
+        $crate::mesh::Triangle::new($a, $b, $c, $m.clone())
     };
 }
 
@@ -62,25 +56,24 @@ impl Mesh {
         assert_eq!(indices.len(), n_indices / 3, "unexpected n indices");
 
         let tris = indices.iter().fold(Vec::new(), |mut tris, i| {
-            tris.push(Triangle {
-                a: Vec3(
+            tris.push(Triangle::new(
+                Vec3(
                     obj.vertices[i[0]].position[0] as _,
                     obj.vertices[i[0]].position[1] as _,
                     obj.vertices[i[0]].position[2] as _,
                 ),
-
-                b: Vec3(
+                Vec3(
                     obj.vertices[i[1]].position[0] as _,
                     obj.vertices[i[1]].position[1] as _,
                     obj.vertices[i[1]].position[2] as _,
                 ),
-
-                c: Vec3(
+                Vec3(
                     obj.vertices[i[2]].position[0] as _,
                     obj.vertices[i[2]].position[1] as _,
                     obj.vertices[i[2]].position[2] as _,
                 ),
-            });
+                material.clone(),
+            ));
             tris
         });
 
@@ -95,24 +88,20 @@ impl Mesh {
         })
     }
 
-    pub fn into_hittable(self) -> Box<dyn Hit> {
-        Box::new(self)
-    }
-
-    fn bounding_box(tris: &mut dyn Iterator<Item = &Triangle>) -> Aabb {
-        tris.fold(Aabb::empty(), |bounds, tri| {
-            bounds.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
-        })
-    }
-
     pub fn rotate(mut self, rotation: Vec3) -> Self {
         let center = self.bbox.center();
         self.tris.iter_mut().for_each(|t| {
             t.a = Self::rotate_point(t.a, center, rotation);
             t.b = Self::rotate_point(t.b, center, rotation);
             t.c = Self::rotate_point(t.c, center, rotation);
+            t.update_bbox();
         });
-        let bbox = Self::bounding_box(&mut self.tris.iter());
+
+        let bbox = self
+            .tris
+            .iter()
+            .fold(Aabb::empty(), |acc, tri| acc.union(&tri.bbox));
+
         Self {
             bbox,
             material: self.material,
@@ -150,12 +139,14 @@ impl Mesh {
                 tri.a += v;
                 tri.b += v;
                 tri.c += v;
+                tri.update_bbox();
                 tri
             })
             .collect::<Vec<_>>();
-        let bbox = tris.iter().fold(Aabb::empty(), |acc, tri| {
-            acc.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
-        });
+
+        let bbox = tris
+            .iter()
+            .fold(Aabb::empty(), |acc, tri| acc.union(&tri.bbox));
 
         Self {
             tris,
@@ -173,36 +164,19 @@ impl Mesh {
                 tri.a = (tri.a - c) * f + c;
                 tri.b = (tri.b - c) * f + c;
                 tri.c = (tri.c - c) * f + c;
+                tri.update_bbox();
                 tri
             })
             .collect::<Vec<_>>();
-        let bbox = tris.iter().fold(Aabb::empty(), |acc, tri| {
-            acc.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
-        });
+        let bbox = tris
+            .iter()
+            .fold(Aabb::empty(), |acc, tri| acc.union(&tri.bbox));
 
         Self {
             bbox,
             tris,
             material: self.material,
         }
-    }
-}
-
-impl Hit for Mesh {
-    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
-        let mut best_hit = None::<HitRecord>;
-        for tri in &self.tris {
-            if let Some(hit) = tri.tri_hit(r, ray_t, &self.material)
-                && ray_t.surrounds(hit.t)
-                && hit.t < best_hit.as_ref().map(|h| h.t).unwrap_or(Float::MAX)
-            {
-                best_hit = Some(hit);
-            }
-        }
-        best_hit
-    }
-    fn bounding_box(&self) -> &Aabb {
-        &self.bbox
     }
 }
 

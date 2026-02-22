@@ -4,6 +4,7 @@ use crate::{
     math::{Float, Ray, Vec3, dot, random, unit_vector},
 };
 
+#[derive(Debug)]
 pub struct Dielectric {
     refraction_index: Float,
 }

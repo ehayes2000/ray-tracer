@@ -1,8 +1,8 @@
 use std::{fs::OpenOptions, io::BufWriter};
 
 use ray_tracer::{
+    bvh::BvhBuilder,
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable_list::HittableList,
     material::{DiffuseLight, Lambertian, Materialify},
     mesh::Mesh,
     v3,
@@ -17,37 +17,37 @@ fn main() {
     let light_left = DiffuseLight::new(v3!(4, 4, 15)); // blue
     let light_right = DiffuseLight::new(v3!(15, 12, 4)); // orange
 
-    let mut world = HittableList::empty()
+    let mut world = BvhBuilder::new()
         // Light behind the camera (camera at z=-800)
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(100, 500, -900),
             v3!(400, 0, 0),
             v3!(0, 0, 200),
             light_behind,
         ))
         // Top light (just above visible frame)
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(100, 900, 50),
             v3!(400, 0, 0),
             v3!(0, 0, 300),
             light_top,
         ))
         // Bottom light (just below visible frame)
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(100, -350, 50),
             v3!(400, 0, 0),
             v3!(0, 0, 300),
             light_bottom,
         ))
         // Left light (just left of visible frame)
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(-350, 100, 50),
             v3!(0, 400, 0),
             v3!(0, 0, 300),
             light_left,
         ))
         // Right light (just right of visible frame)
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(900, 100, 50),
             v3!(0, 400, 0),
             v3!(0, 0, 300),
@@ -77,7 +77,7 @@ fn main() {
             let rot_x = offset_row * rotation_scale;
             let rot_y = offset_col * rotation_scale;
 
-            world = world.push(
+            world = world.mesh(
                 Mesh::volume(
                     v3!(x, y, grid_z),
                     v3!(cube_size, cube_size, cube_size),
@@ -108,7 +108,7 @@ fn main() {
         let x = face_base_x + (i as f64) * face_spacing;
         let y = face_y;
 
-        world = world.push(
+        world = world.mesh(
             Mesh::volume(
                 v3!(x, y, grid_z),
                 v3!(cube_size, cube_size, cube_size),
@@ -130,7 +130,7 @@ fn main() {
             image_width: 800.,
             aspect_ratio: 1.0,
             max_bounces: 15.,
-            samples_per_pixel: 14. * 1.,
+            samples_per_pixel: 14. * 3.,
             background_color: v3!(0, 0, 0),
         },
     );
@@ -138,9 +138,10 @@ fn main() {
     let file = OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(true)
         .open("volume_grid.ppm")
         .expect("volume_grid.ppm");
 
     let writer = BufWriter::new(file);
-    camera.render_multi(14, writer, Arc::new(world.into_bvh()));
+    camera.render_multi(14, writer, Arc::new(world.build()));
 }

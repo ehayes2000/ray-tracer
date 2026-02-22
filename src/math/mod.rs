@@ -10,5 +10,10 @@ pub use ray::*;
 pub use util::*;
 pub use vec3::*;
 
+#[cfg(not(feature = "gpu"))]
 pub type Float = f64;
-pub const EPSILON: Float = 0.000001;
+
+#[cfg(feature = "gpu")]
+pub type Float = f32;
+
+pub const EPSILON: Float = 1E-9;

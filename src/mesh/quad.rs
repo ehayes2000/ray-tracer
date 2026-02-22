@@ -1,9 +1,10 @@
-use super::{Mesh, Triangle};
+use super::Mesh;
 
 use crate::{
     aabb::Aabb,
     material::Materialify,
     math::{Point, Vec3},
+    tri,
 };
 
 impl Mesh {
@@ -19,7 +20,7 @@ impl Mesh {
             .union_pt(&c)
             .union_pt(&d)
             .pad();
-        let tris = vec![Triangle { a, b, c }, Triangle { a: b, b: d, c }];
+        let tris = vec![tri!(a, b, c, material), tri!(b, d, c, material)];
         Self {
             tris,
             material,

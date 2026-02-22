@@ -1,8 +1,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use ray_tracer::{
-    bvh::Bvh,
+    bvh::{Bvh, BvhBuilder},
     hit::Hit,
-    hittable_list::{Hitify, HittableList},
     material::{DiffuseLight, Lambertian, Materialify},
     math::{Float, Interval, Ray},
     mesh::Mesh,
@@ -15,59 +14,58 @@ fn create_bvh() -> Bvh {
     let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
     let green = Lambertian::new(v3!(0.12, 0.45, 0.15));
     let light = DiffuseLight::new(v3!(15, 15, 15));
-
-    let world = HittableList::empty()
+    BvhBuilder::new()
         // right wall
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(555, 0, 0),
             v3!(0, 555, 0),
             v3!(0, 0, 555),
             green,
         ))
         // light
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(343, 554, 332),
             v3!(-130, 0, 0),
             v3!(0, 0, -105),
             light,
         ))
         // back wall
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(0, 0, 555),
             v3!(555, 0, 0),
             v3!(0, 555, 0),
             white.clone(),
         ))
         // left wall
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(0, 0, 0),
             v3!(0, 555, 0),
             v3!(0, 0, 555),
             red.clone(),
         ))
         // roof
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(555, 555, 555),
             v3!(-555, 0, 0),
             v3!(0, 0, -555),
             white.clone(),
         ))
         // floor
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(0, 0, 0),
             v3!(555, 0, 0),
             v3!(0, 0, 555),
             white.clone(),
         ))
-        .push(
+        .mesh(
             Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone())
                 .rotate(v3!(0, -0.3, 0)),
         )
-        .push(
+        .mesh(
             Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone())
                 .rotate(v3!(0, 0.3, 0)),
-        );
-    world.into_bvh()
+        )
+        .build()
 }
 
 fn bench_bvh_cornell(c: &mut Criterion) {
@@ -76,7 +74,7 @@ fn bench_bvh_cornell(c: &mut Criterion) {
     let direction = v3!(1, 0, 1);
     let ray = Ray { origin, direction };
     let t = Interval::full();
-    let mut group = c.benchmark_group("bvh_hit");
+    let mut group = c.benchmark_group("low_poly_bvh");
     group.bench_function("fixed_point", |b| b.iter(|| black_box(bvh.hit(&ray, &t))));
 
     group.bench_function("bvh_hit", |b| {
@@ -104,9 +102,10 @@ fn bench_bvh_knight(c: &mut Criterion) {
     let mut group = c.benchmark_group("high_poly_bvh");
     let material = Lambertian::new(v3!(0.7, 0.7, 0.7)).materialify();
     let knight = mesh_obj!("models/chess_knight.obj", material).expect("load knight");
-    let radius = knight.bounding_box()[knight.bounding_box().longest()].size() * 2.0;
-    let look_at = knight.bounding_box().center();
-    let bvh = Bvh::from_objects(vec![knight.hitify()]);
+    let radius = knight.bbox[knight.bbox.longest()].size() * 2.0;
+    let look_at = knight.bbox.center();
+    let bvh = BvhBuilder::new().mesh(knight).build();
+
     let interval = Interval::full();
     let polar_steps = || {
         const STEPS: usize = 100;

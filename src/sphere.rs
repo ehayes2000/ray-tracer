@@ -6,6 +6,7 @@ use super::{
 use crate::aabb::Aabb;
 use std::sync::Arc;
 
+#[derive(Clone, Debug)]
 pub struct Sphere {
     pub center: Point,
     pub radius: Float,

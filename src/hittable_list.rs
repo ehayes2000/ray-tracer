@@ -1,22 +1,13 @@
 use crate::{
     aabb::Aabb,
-    bvh::Bvh,
     hit::*,
     math::{Interval, Ray},
 };
 use std::{fmt::Debug, sync::Arc};
 
-impl Hit for Arc<dyn Hit + Send + Sync + 'static> {
-    fn bounding_box(&self) -> &Aabb {
-        (**self).bounding_box()
-    }
-    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
-        (**self).hit(r, ray_t)
-    }
-}
 #[derive(Default)]
 pub struct HittableList {
-    objects: Vec<Arc<dyn Hit>>,
+    objects: Vec<Box<dyn Hit>>,
     bbox: Aabb,
 }
 
@@ -30,7 +21,7 @@ impl Debug for HittableList {
 }
 
 impl HittableList {
-    pub fn new(objects: Vec<Arc<dyn Hit>>) -> Self {
+    pub fn new(objects: Vec<Box<dyn Hit>>) -> Self {
         let bbox = objects
             .iter()
             .fold(Aabb::empty(), |acc, o| acc.union(o.bounding_box()));
@@ -46,15 +37,10 @@ impl HittableList {
         self.objects.clear();
     }
 
-    pub fn push<T: Hitify>(mut self, object: T) -> Self {
-        let object = object.hitify();
+    pub fn push(mut self, object: Box<dyn Hit>) -> Self {
         self.bbox = self.bbox.union(object.bounding_box());
         self.objects.push(object);
         self
-    }
-
-    pub fn into_bvh(self) -> Bvh {
-        Bvh::from_objects(self.objects)
     }
 }
 

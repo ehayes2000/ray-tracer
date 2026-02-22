@@ -1,4 +1,5 @@
 use super::types::Triangle;
+use crate::math::Float;
 use encase::{ShaderSize, ShaderType};
 
 use crate::math::Vec3;

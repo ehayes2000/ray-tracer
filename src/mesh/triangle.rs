@@ -1,25 +1,38 @@
 use crate::{
-    hit::HitRecord,
+    aabb::Aabb,
+    hit::{Hit, HitRecord},
     material::Material,
     math::{Float, Interval, Point, Ray, Vec3, cross, dot},
 };
 use std::sync::Arc;
 // counter-clockwise winding front
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Triangle {
     pub a: Point,
     pub b: Point,
     pub c: Point,
+    pub bbox: Aabb,
+    pub material: Arc<dyn Material>,
 }
 
-pub(crate) struct TriHit {
+pub struct TriHit {
     pub t: Float,
     pub front_face: bool,
     pub normal: Vec3,
 }
 
 impl Triangle {
-    fn moller_trumbore_intersection(&self, r: &Ray) -> Option<TriHit> {
+    pub fn new(a: Point, b: Point, c: Point, material: Arc<dyn Material>) -> Self {
+        let bbox = Aabb::empty().union_pt(&a).union_pt(&b).union_pt(&c).pad();
+        Self {
+            a,
+            b,
+            c,
+            bbox,
+            material,
+        }
+    }
+    pub fn moller_trumbore_intersection(&self, r: &Ray) -> Option<TriHit> {
         let e1 = self.b - self.a;
         let e2 = self.c - self.a;
 
@@ -82,24 +95,35 @@ impl Triangle {
             }
         })
     }
+
+    pub fn update_bbox(&mut self) {
+        self.bbox = Aabb::empty()
+            .union_pt(&self.a)
+            .union_pt(&self.b)
+            .union_pt(&self.c)
+            .pad();
+    }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
+impl Hit for Triangle {
+    fn bounding_box(&self) -> &Aabb {
+        &self.bbox
+    }
 
-    #[test]
-    fn test_intersect() {
-        let t = Triangle {
-            a: Vec3(0.0, 0.48371198773384094, 0.21013599634170532),
-            b: Vec3(0.0, 0.454694002866745, 0.2285809963941574),
-            c: Vec3(0.012532000429928303, 0.4558370113372803, 0.2269749939441681),
-        };
-        let r = Ray {
-            origin: Vec3(0., 0.45843350887298584, 1.8337340354919434),
-            direction: Vec3(0., 0., -1.0),
-        };
-
-        assert!(t.moller_trumbore_intersection(&r).is_some());
+    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
+        self.moller_trumbore_intersection(r).and_then(|tri_hit| {
+            if ray_t.contains(tri_hit.t) {
+                let intersection_point = r.origin + tri_hit.t * r.direction;
+                Some(HitRecord {
+                    p: intersection_point,
+                    t: tri_hit.t,
+                    normal: tri_hit.normal,
+                    front_face: tri_hit.front_face,
+                    material: self.material.clone(),
+                })
+            } else {
+                None
+            }
+        })
     }
 }

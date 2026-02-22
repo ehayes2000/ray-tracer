@@ -6,8 +6,17 @@ use crate::{
 use std::{fmt::Debug, sync::Arc};
 
 pub trait Hit: Send + Sync + 'static {
-    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord>;
+    fn hit(&self, r: &Ray, t: &Interval) -> Option<HitRecord>;
     fn bounding_box(&self) -> &Aabb;
+}
+
+impl Hit for Arc<dyn Hit + Send + Sync + 'static> {
+    fn bounding_box(&self) -> &Aabb {
+        (**self).bounding_box()
+    }
+    fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
+        (**self).hit(r, ray_t)
+    }
 }
 
 #[derive(Clone)]

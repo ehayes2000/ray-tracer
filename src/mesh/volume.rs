@@ -1,5 +1,5 @@
 use super::Mesh;
-use crate::{tri, v3};
+use crate::{aabb::Aabb, tri, v3};
 
 use crate::{
     material::Materialify,
@@ -24,26 +24,29 @@ impl Mesh {
 
         let tris = vec![
             // bottom (-y outward)
-            tri!(ba, bb, bd),
-            tri!(bb, bc, bd),
+            tri!(ba, bb, bd, material),
+            tri!(bb, bc, bd, material),
             // top (+y outward)
-            tri!(tb, ta, td),
-            tri!(tb, td, tc),
+            tri!(tb, ta, td, material),
+            tri!(tb, td, tc, material),
             // side_ab (-z outward)
-            tri!(bb, ba, tb),
-            tri!(ta, tb, ba),
+            tri!(bb, ba, tb, material),
+            tri!(ta, tb, ba, material),
             // side_bc (+x outward)
-            tri!(bb, tc, bc),
-            tri!(tb, tc, bb),
+            tri!(bb, tc, bc, material),
+            tri!(tb, tc, bb, material),
             // side_cd (+z outward)
-            tri!(bd, bc, td),
-            tri!(tc, td, bc),
+            tri!(bd, bc, td, material),
+            tri!(tc, td, bc, material),
             // side_ad (-x outward)
-            tri!(bd, td, ba),
-            tri!(td, ta, ba),
+            tri!(bd, td, ba, material),
+            tri!(td, ta, ba, material),
         ];
 
-        let bbox = Self::bounding_box(&mut tris.iter());
+        let bbox = tris
+            .iter()
+            .fold(Aabb::empty(), |acc, tri| acc.union(&tri.bbox));
+
         Self {
             bbox,
             tris,

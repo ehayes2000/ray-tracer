@@ -1,4 +1,5 @@
 use super::{bvh::build_shader_bvh, mesh::Mesh, scene::Scene};
+use crate::math::Float;
 use std::{iter, sync::Arc};
 use wgpu::{FragmentState, VertexState};
 use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window};

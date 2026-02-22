@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 fn main() {
     let ground_m = Lambertian::new(v3!(0.5, 0.5, 0.5));
-    let mut world = HittableList::empty().push(ball!(v3!(0, -1000, 0), 1000., ground_m));
+    let mut world = HittableList::empty().push(Box::new(ball!(v3!(0, -1000, 0), 1000., ground_m)));
     for a in -11..11 {
         let a = a as Float;
         for b in -11..11 {
@@ -29,26 +29,26 @@ fn main() {
                 } else {
                     Dielectric::new(1.5).materialify()
                 };
-                world = world.push(ball!(center, 0.2, material));
+                world = world.push(Box::new(ball!(center, 0.2, material)));
             }
         }
     }
     let world = world
-        .push(ball!(v3!(0, 1, 0), 1.0, Dielectric::new(1.5)))
-        .push(ball!(
+        .push(Box::new(ball!(v3!(0, 1, 0), 1.0, Dielectric::new(1.5))))
+        .push(Box::new(ball!(
             v3!(-4, 1, 0),
             1.0,
             Lambertian::new(v3!(0.4, 0.2, 0.1))
-        ))
-        .push(ball!(
+        )))
+        .push(Box::new(ball!(
             v3!(4, 1, 0),
             1.0,
             Metal::new(v3!(0.7, 0.6, 0.5), 0.0)
-        ));
+        )));
     let render_params = RenderParameters {
         aspect_ratio: 16. / 9.,
         image_width: 1200.,
-        samples_per_pixel: 20.,
+        samples_per_pixel: 14.,
         max_bounces: 15.,
         background_color: v3!(0, 0, 0),
     };
@@ -64,8 +64,9 @@ fn main() {
     let mut output_file = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(true)
         .open("random_spheres.ppm")
         .expect("random_spheres.ppm");
 
-    camera.render_multi(14, &mut output_file, Arc::new(world.into_bvh()));
+    camera.render_multi(14, &mut output_file, Arc::new(world));
 }

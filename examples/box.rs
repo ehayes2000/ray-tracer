@@ -1,6 +1,7 @@
 use std::io::BufWriter;
 
 use ray_tracer::{
+    bvh::BvhBuilder,
     camera::{Camera, CameraParameters, RenderParameters},
     hittable_list::HittableList,
     material::Lambertian,
@@ -17,32 +18,32 @@ fn main() {
     let lower_teal = Lambertian::new(v3!(0.2, 0.8, 0.8));
 
     // Quads
-    let world = HittableList::empty()
-        .push(Mesh::quad(
+    let world = BvhBuilder::new()
+        .mesh(Mesh::quad(
             v3!(-3.0, -2.0, 5.0),
             v3!(0.0, 0.0, -4.0),
             v3!(0.0, 4.0, 0.0),
             left_red,
         ))
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(-2.0, -2.0, 0.0),
             v3!(4.0, 0.0, 0.0),
             v3!(0.0, 4.0, 0.0),
             back_green,
         ))
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(3.0, -2.0, 1.0),
             v3!(0.0, 0.0, 4.0),
             v3!(0.0, 4.0, 0.0),
             right_blue,
         ))
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(-2.0, 3.0, 1.0),
             v3!(4.0, 0.0, 0.0),
             v3!(0.0, 0.0, 4.0),
             upper_orange,
         ))
-        .push(Mesh::quad(
+        .mesh(Mesh::quad(
             v3!(-2.0, -3.0, 5.0),
             v3!(4.0, 0.0, 0.0),
             v3!(0.0, 0.0, -4.0),
@@ -75,5 +76,5 @@ fn main() {
         .expect("box.ppm");
 
     let mut writer = BufWriter::new(output_file);
-    camera.render(&mut writer, world.into_bvh());
+    camera.render(&mut writer, world.build());
 }

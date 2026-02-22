@@ -13,8 +13,8 @@ fn main() {
     let mat_l = Lambertian::new(v3!(0, 0, 1));
     let mat_r = Lambertian::new(v3!(1, 0, 0));
     let world = HittableList::empty()
-        .push(ball!(v3!(-r, 0, -1), r, mat_l))
-        .push(ball!(v3!(r, 0, -1), r, mat_r));
+        .push(Box::new(ball!(v3!(-r, 0, -1), r, mat_l)))
+        .push(Box::new(ball!(v3!(r, 0, -1), r, mat_r)));
 
     let rparams = RenderParameters::default();
     let cparams = CameraParameters {
@@ -28,6 +28,7 @@ fn main() {
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(true)
         .open("calibration.ppm")
         .expect("open calibration.ppm");
     cam.render(&mut file, world);

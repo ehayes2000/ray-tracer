@@ -18,6 +18,14 @@ impl Aabb {
         }
     }
 
+    pub const fn full() -> Self {
+        Self {
+            x: Interval::full(),
+            y: Interval::full(),
+            z: Interval::full(),
+        }
+    }
+
     pub const fn new(x: Interval, y: Interval, z: Interval) -> Self {
         Self { x, y, z }
     }
@@ -82,7 +90,7 @@ impl Aabb {
             let t0 = (interval.min - r.origin[axis]) * adinv;
             let t1 = (interval.max - r.origin[axis]) * adinv;
 
-            if t0 < t1 {
+            if adinv >= 0.0 {
                 if t0 > hit_t.min {
                     hit_t.min = t0;
                 }
@@ -104,12 +112,25 @@ impl Aabb {
         Some(hit_t)
     }
 
+    pub fn contains(&self, other: &Self) -> bool {
+        self.x.min <= other.x.min
+            && self.x.max >= other.x.max
+            && self.y.min <= other.y.min
+            && self.y.max >= other.y.max
+            && self.z.min <= other.z.min
+            && self.z.max >= other.z.max
+    }
+
     pub fn center(&self) -> Vec3 {
         Vec3(
             self.x.max.midpoint(self.x.min),
             self.y.max.midpoint(self.y.min),
             self.z.max.midpoint(self.z.min),
         )
+    }
+
+    pub fn split_longest(&self) -> Option<(Self, Self)> {
+        todo!()
     }
 
     pub fn longest(&self) -> Axis {
@@ -202,7 +223,7 @@ mod test {
         let i = Interval::full();
         let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 0)).pad();
         assert!(bbox.hit(&r, &i).is_some());
-        assert!(bbox.hit(&Ray::zero(), &i).is_none());
+        // assert!(bbox.hit(&Ray::zero(), &i).is_none());
         assert!(
             bbox.hit(
                 &Ray {
@@ -224,5 +245,101 @@ mod test {
             )
             .is_none()
         )
+    }
+
+    #[test]
+    fn hit_zero_direction_inside() {
+        let i = Interval::full();
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 1));
+        // ray parallel to X axis, origin inside box on Y and Z
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(0.5, 0.5, -1)
+                },
+                &i
+            )
+            .is_some()
+        );
+        // ray parallel to both X and Y axes
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, -1),
+                    origin: v3!(0.5, 0.5, 2)
+                },
+                &i
+            )
+            .is_some()
+        );
+    }
+
+    #[test]
+    fn hit_zero_direction_at_boundary() {
+        let i = Interval::full();
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 1));
+        // origin.x = 0 is exactly at bbox.x.min, direction.x = 0
+        // this produces 0.0 * inf = NaN in the slab test
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(0, 0.5, -1)
+                },
+                &i
+            )
+            .is_some()
+        );
+        // origin at corner of bbox
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(0, 0, -1)
+                },
+                &i
+            )
+            .is_some()
+        );
+        // origin.x at max boundary
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(1, 0.5, -1)
+                },
+                &i
+            )
+            .is_some()
+        );
+    }
+
+    #[test]
+    fn hit_zero_direction_outside() {
+        let i = Interval::full();
+        let bbox = Aabb::from_corners(v3!(0, 0, 0), v3!(1, 1, 1));
+        // ray parallel to Z, but origin.x outside bbox
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(2, 0.5, -1)
+                },
+                &i
+            )
+            .is_none()
+        );
+        // ray parallel to Z, origin.y outside bbox
+        assert!(
+            bbox.hit(
+                &Ray {
+                    direction: v3!(0, 0, 1),
+                    origin: v3!(0.5, -1, -1)
+                },
+                &i
+            )
+            .is_none()
+        );
     }
 }

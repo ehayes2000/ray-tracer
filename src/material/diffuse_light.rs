@@ -4,6 +4,7 @@ use crate::{
     math::{Color, Ray},
 };
 
+#[derive(Debug)]
 pub struct DiffuseLight {
     pub color: Color,
 }

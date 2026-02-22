@@ -12,6 +12,7 @@ use crate::{
     hit::HitRecord,
     math::{Color, Point, Ray},
 };
+use std::fmt::Debug;
 
 use std::sync::Arc;
 
@@ -20,7 +21,7 @@ pub struct Scatter {
     pub ray: Ray,
 }
 
-pub trait Material: Send + Sync + 'static {
+pub trait Material: Debug + Send + Sync + 'static {
     fn scatter(&self, ray_in: &Ray, hit: &HitRecord) -> Option<Scatter>;
     fn emit(&self, _: Point) -> Color {
         Color::zero()
