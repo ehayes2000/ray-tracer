@@ -2,9 +2,10 @@ use super::Mesh;
 use crate::{aabb::Aabb, tri, v3};
 
 use crate::{
-    material::Materialify,
+    material::Material,
     math::{Point, Vec3},
 };
+use std::sync::Arc;
 
 impl Mesh {
     ///  a --- b // xz plane
@@ -12,8 +13,8 @@ impl Mesh {
     ///  |     | ^
     ///  d --- c |
     ///          z --> x
-    pub fn volume(ba: Point, tc_v: Vec3, material: impl Materialify) -> Self {
-        let material = material.materialify();
+    pub fn volume(ba: Point, tc_v: Vec3, material: impl Material) -> Self {
+        let material = Arc::new(material);
         let bb = ba + v3!(tc_v.0, 0, 0);
         let bc = ba + v3!(tc_v.0, 0, tc_v.2);
         let bd = ba + v3!(0, 0, tc_v.2);

@@ -36,3 +36,6 @@ panic = "abort"
 [profile.profiling]
 inherits = "release"
 debug = true
+
+[prifile.example]
+inherits = "release"

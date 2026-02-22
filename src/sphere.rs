@@ -1,6 +1,6 @@
 use super::{
     hit::*,
-    material::{Material, Materialify},
+    material::Material,
     math::{Float, Interval, Point, Ray, Vec3, dot},
 };
 use crate::aabb::Aabb;
@@ -15,13 +15,14 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: Float, material: impl Materialify) -> Self {
+    pub fn new(center: Point, radius: Float, material: impl Material) -> Self {
         let rvec = Vec3(radius, radius, radius);
         let bbox = Aabb::from_corners(center - rvec, center + rvec);
+        let material = Arc::new(material);
         Self {
             center,
             radius,
-            material: material.materialify(),
+            material,
             bbox,
         }
     }

@@ -80,9 +80,7 @@ impl Hit for BvhNode {
     }
 
     fn hit(&self, r: &Ray, ray_t: &Interval) -> Option<HitRecord> {
-        if self.bbox.hit(r, ray_t).is_none() {
-            return None;
-        }
+        self.bbox.hit(r, ray_t)?;
         let lhit = self.left.as_ref().and_then(|l| l.hit(r, ray_t));
 
         let ray_t = if let Some(h) = &lhit {

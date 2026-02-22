@@ -3,7 +3,7 @@ use crate::{
     hit::*,
     math::{Interval, Ray},
 };
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 #[derive(Default)]
 pub struct HittableList {
@@ -59,21 +59,5 @@ impl Hit for HittableList {
 
     fn bounding_box(&self) -> &Aabb {
         &self.bbox
-    }
-}
-
-pub trait Hitify {
-    fn hitify(self) -> Arc<dyn Hit>;
-}
-
-impl<T: Hit> Hitify for T {
-    fn hitify(self) -> Arc<dyn Hit> {
-        Arc::new(self)
-    }
-}
-
-impl Hitify for Arc<dyn Hit> {
-    fn hitify(self) -> Arc<dyn Hit> {
-        self
     }
 }

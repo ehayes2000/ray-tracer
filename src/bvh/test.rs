@@ -2,10 +2,10 @@ use super::*;
 use crate::{
     aabb::Aabb,
     hit::Hit,
-    material::{Lambertian, Materialify},
-    math::{Float, Interval, Ray},
+    material::Lambertian,
+    math::{Interval, Ray},
     mesh::Mesh,
-    mesh_obj, ray, v3,
+    mesh_obj, v3,
 };
 
 #[test]
@@ -87,71 +87,3 @@ fn nested_boxes() {
     }
     assert!(contains_children(&bvh, None));
 }
-
-// bvh is falsly detecting hits on quads. The false positive is not consistent and some light still gets through
-// test with 2 planes
-// back: large
-// front small
-// #[test]
-// fn obscured_hit() {
-//     let material = Lambertian::new(v3!(1, 1, 1)).materialify();
-//     let objects: Vec<Arc<dyn Hit>> = vec![
-//         // back quad
-//         Mesh::quad(
-//             v3!(0, 0, 10),
-//             v3!(1000, 0, 0),
-//             v3!(0, 1000, 0),
-//             material.clone(),
-//         )
-//         .hitify(),
-//         Mesh::quad(
-//             v3!(10, 10, 0),
-//             v3!(10, 0, 0),
-//             v3!(0, 10, 0),
-//             material.clone(),
-//         )
-//         .hitify(),
-//     ];
-//     let look_from = v3!(15, 15, -10);
-//     let ray = Ray {
-//         direction: v3!(0, 0, 1),
-//         origin: look_from,
-//     };
-
-//     assert!(
-//         objects[1]
-//             .hit(&ray, &Interval::new(Float::MIN, Float::MAX))
-//             .is_some()
-//     );
-
-//     assert!(
-//         objects[0]
-//             .hit(&ray, &Interval::new(Float::MIN, Float::MAX))
-//             .is_some()
-//     );
-//     assert!(
-//         objects[0]
-//             .hit(&ray, &Interval::new(Float::MIN, 0.0))
-//             .is_none()
-//     );
-
-//     let bvh = Bvh::from_objects(objects.clone());
-//     let hit = bvh.hit(&ray, &Interval::new(Float::MIN, Float::MAX));
-//     assert!(hit.is_some());
-//     assert_eq!(hit.unwrap().p, v3!(15, 15, 0));
-
-//     let r_miss = ray!(v3!(-1, -1, 0), v3!(0, 0, 1));
-//     assert!(objects[1].hit(&r_miss, &Interval::full()).is_none());
-//     assert!(objects[0].hit(&r_miss, &Interval::full()).is_none());
-//     assert!(bvh.hit(&r_miss, &Interval::full()).is_none());
-
-//     let r_hit_back = ray!(v3!(1, 1, 0), v3!(0, 0, 1));
-
-//     assert!(objects[1].hit(&r_hit_back, &Interval::full()).is_none());
-//     assert!(objects[0].hit(&r_hit_back, &Interval::full()).is_some());
-//     assert!(bvh.hit(&r_hit_back, &Interval::full()).is_some());
-//     assert_eq!(
-//         bvh.hit(&r_hit_back, &Interval::full()).unwrap().p,
-//         v3!(1, 1, 10)
-//     );
-// }

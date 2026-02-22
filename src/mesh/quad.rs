@@ -2,14 +2,15 @@ use super::Mesh;
 
 use crate::{
     aabb::Aabb,
-    material::Materialify,
+    material::Material,
     math::{Point, Vec3},
     tri,
 };
+use std::sync::Arc;
 
 impl Mesh {
-    pub fn quad(corner: Point, u: Vec3, v: Vec3, material: impl Materialify) -> Self {
-        let material = material.materialify();
+    pub fn quad(corner: Point, u: Vec3, v: Vec3, material: impl Material) -> Self {
+        let material = Arc::new(material);
         let a = corner;
         let b = a + u;
         let c = a + v;

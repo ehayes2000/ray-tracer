@@ -9,7 +9,7 @@ use std::{fs::File, io::BufReader, sync::Arc};
 
 use crate::{
     aabb::Aabb,
-    material::{Material, Materialify},
+    material::Material,
     math::{Float, Vec3},
 };
 
@@ -31,10 +31,10 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn try_from_file(path: &str, material: impl Materialify) -> Result<Self> {
-        let material = material.materialify();
+    pub fn try_from_file(path: &str, material: impl Material) -> Result<Self> {
         let buf = BufReader::new(File::open(path)?);
         let obj: Obj = load_obj(buf)?;
+        let material = Arc::new(material);
 
         let n_indices = obj.indices.len();
         if n_indices % 3 != 0 {

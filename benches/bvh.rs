@@ -2,7 +2,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use ray_tracer::{
     bvh::{Bvh, BvhBuilder},
     hit::Hit,
-    material::{DiffuseLight, Lambertian, Materialify},
+    material::{DiffuseLight, Lambertian},
     math::{Float, Interval, Ray},
     mesh::Mesh,
     mesh_obj, v3,
@@ -10,8 +10,8 @@ use ray_tracer::{
 use std::{f64, hint::black_box};
 
 fn create_bvh() -> Bvh {
-    let red = Lambertian::new(v3!(0.65, 0.05, 0.05)).materialify();
-    let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
+    let red = Lambertian::new(v3!(0.65, 0.05, 0.05));
+    let white = Lambertian::new(v3!(0.73, 0.73, 0.73));
     let green = Lambertian::new(v3!(0.12, 0.45, 0.15));
     let light = DiffuseLight::new(v3!(15, 15, 15));
     BvhBuilder::new()
@@ -100,7 +100,7 @@ fn bench_bvh_cornell(c: &mut Criterion) {
 
 fn bench_bvh_knight(c: &mut Criterion) {
     let mut group = c.benchmark_group("high_poly_bvh");
-    let material = Lambertian::new(v3!(0.7, 0.7, 0.7)).materialify();
+    let material = Lambertian::new(v3!(0.7, 0.7, 0.7));
     let knight = mesh_obj!("models/chess_knight.obj", material).expect("load knight");
     let radius = knight.bbox[knight.bbox.longest()].size() * 2.0;
     let look_at = knight.bbox.center();
@@ -115,7 +115,7 @@ fn bench_bvh_knight(c: &mut Criterion) {
     };
 
     let azimuthal_steps = || {
-        const STEPS: usize = 15;
+        const STEPS: usize = 25;
         (0..STEPS)
             .map(|i| i as f64 * 2.0 * std::f64::consts::PI / STEPS as f64)
             .map(|f| f as Float)

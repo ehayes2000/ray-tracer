@@ -7,12 +7,12 @@ use crate::{
     sphere::Sphere,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BvhBuilder {
     pub objects: Vec<HittableObject>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BvhDebugger {
     pub objects: Vec<HittableObject>,
     pub bbox: Aabb,
@@ -24,7 +24,7 @@ impl BvhBuilder {
     }
 
     pub fn mesh(mut self, mesh: Mesh) -> Self {
-        let tris = mesh.tris.into_iter().map(|t| HittableObject::Tri(t));
+        let tris = mesh.tris.into_iter().map(HittableObject::Tri);
         self.objects.extend(tris);
         self
     }
@@ -47,7 +47,7 @@ impl BvhBuilder {
 
         BvhDebugger {
             objects: self.objects,
-            bbox: bbox,
+            bbox,
         }
     }
 }

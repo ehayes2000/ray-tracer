@@ -5,7 +5,7 @@ use crate::{
 };
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Lambertian {
     albedo: Color,
 }
