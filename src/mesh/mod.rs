@@ -15,13 +15,23 @@ use crate::{
 
 #[macro_export]
 macro_rules! tri {
-    ($a:expr, $b:expr, $c:expr, $m:expr) => {
-        $crate::mesh::Triangle::new($a, $b, $c, $m.clone())
-    };
-}
+    ($a:expr, $b:expr, $c:expr, $m:expr) => {{
+        let normal = crate::mesh::Triangle::compute_normal(&$a, &$b, &$c);
+        let a = crate::mesh::Vertex {
+            position: $a,
+            normal,
+        };
+        let b = crate::mesh::Vertex {
+            position: $b,
+            normal,
+        };
 
-pub struct Vertex {
-    pub position: Vec3,
+        let c = crate::mesh::Vertex {
+            position: $c,
+            normal,
+        };
+        $crate::mesh::Triangle::new(a, b, c, $m.clone())
+    }};
 }
 
 pub struct Mesh {
@@ -57,28 +67,27 @@ impl Mesh {
 
         let tris = indices.iter().fold(Vec::new(), |mut tris, i| {
             tris.push(Triangle::new(
-                Vec3(
-                    obj.vertices[i[0]].position[0] as _,
-                    obj.vertices[i[0]].position[1] as _,
-                    obj.vertices[i[0]].position[2] as _,
-                ),
-                Vec3(
-                    obj.vertices[i[1]].position[0] as _,
-                    obj.vertices[i[1]].position[1] as _,
-                    obj.vertices[i[1]].position[2] as _,
-                ),
-                Vec3(
-                    obj.vertices[i[2]].position[0] as _,
-                    obj.vertices[i[2]].position[1] as _,
-                    obj.vertices[i[2]].position[2] as _,
-                ),
+                Vertex {
+                    normal: obj.vertices[i[0]].normal.into(),
+                    position: obj.vertices[i[0]].position.into(),
+                },
+                Vertex {
+                    normal: obj.vertices[i[1]].normal.into(),
+                    position: obj.vertices[i[1]].position.into(),
+                },
+                Vertex {
+                    normal: obj.vertices[i[2]].normal.into(),
+                    position: obj.vertices[i[2]].position.into(),
+                },
                 material.clone(),
             ));
             tris
         });
 
         let bbox = tris.iter().fold(Aabb::empty(), |bbox, tri| {
-            bbox.union_pt(&tri.a).union_pt(&tri.b).union_pt(&tri.c)
+            bbox.union_pt(&tri.a.position)
+                .union_pt(&tri.b.position)
+                .union_pt(&tri.c.position)
         });
 
         Ok(Self {
@@ -91,9 +100,13 @@ impl Mesh {
     pub fn rotate(mut self, rotation: Vec3) -> Self {
         let center = self.bbox.center();
         self.tris.iter_mut().for_each(|t| {
-            t.a = Self::rotate_point(t.a, center, rotation);
-            t.b = Self::rotate_point(t.b, center, rotation);
-            t.c = Self::rotate_point(t.c, center, rotation);
+            t.a.position = Self::rotate_about_center(t.a.position, center, rotation);
+            t.b.position = Self::rotate_about_center(t.b.position, center, rotation);
+            t.c.position = Self::rotate_about_center(t.c.position, center, rotation);
+
+            t.a.normal = Self::rotate_point(t.a.normal, rotation);
+            t.b.normal = Self::rotate_point(t.b.normal, rotation);
+            t.c.normal = Self::rotate_point(t.c.normal, rotation);
             t.update_bbox();
         });
 
@@ -109,9 +122,7 @@ impl Mesh {
         }
     }
 
-    fn rotate_point(point: Vec3, center: Vec3, rotation: Vec3) -> Vec3 {
-        let p = point - center;
-
+    fn rotate_point(p: Vec3, rotation: Vec3) -> Vec3 {
         let (sx, cx) = rotation.0.sin_cos();
         let (sy, cy) = rotation.1.sin_cos();
         let (sz, cz) = rotation.2.sin_cos();
@@ -128,7 +139,12 @@ impl Mesh {
         let y3 = x2 * sz + y2 * cz;
         let z3 = z2;
 
-        Vec3(x3, y3, z3) + center
+        Vec3(x3, y3, z3)
+    }
+
+    fn rotate_about_center(point: Vec3, center: Vec3, rotation: Vec3) -> Vec3 {
+        let p = point - center;
+        Self::rotate_point(p, rotation) + center
     }
 
     pub fn translate(self, v: Vec3) -> Self {
@@ -136,9 +152,9 @@ impl Mesh {
             .tris
             .into_iter()
             .map(|mut tri| {
-                tri.a += v;
-                tri.b += v;
-                tri.c += v;
+                tri.a.position += v;
+                tri.b.position += v;
+                tri.c.position += v;
                 tri.update_bbox();
                 tri
             })
@@ -161,9 +177,9 @@ impl Mesh {
             .tris
             .into_iter()
             .map(|mut tri| {
-                tri.a = (tri.a - c) * f + c;
-                tri.b = (tri.b - c) * f + c;
-                tri.c = (tri.c - c) * f + c;
+                tri.a.position = (tri.a.position - c) * f + c;
+                tri.b.position = (tri.b.position - c) * f + c;
+                tri.c.position = (tri.c.position - c) * f + c;
                 tri.update_bbox();
                 tri
             })

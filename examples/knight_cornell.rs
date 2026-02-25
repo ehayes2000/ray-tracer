@@ -19,8 +19,8 @@ fn main() {
 
     let model = mesh_obj!("models/chess_knight.obj", glass)
         .expect("knight")
-        .scale(250.)
-        .translate(v3!(225, 125, 200))
+        .scale(300.)
+        .translate(v3!(200, 150.0 - 12.929, 200))
         .rotate(v3!(0, 3.1415 * 0.25, 0));
 
     let bvh = BvhBuilder::new()
@@ -78,10 +78,10 @@ fn main() {
             focus_distance: 1.0,
         },
         RenderParameters {
-            image_width: 1080.,
+            image_width: 1920.,
             aspect_ratio: 1.0,
-            max_bounces: 25.,
-            samples_per_pixel: 14. * 400.,
+            max_bounces: 15.,
+            samples_per_pixel: 14. * 1000.,
             background_color: v3!(0, 0, 0),
         },
     );
@@ -95,5 +95,4 @@ fn main() {
 
     let mut writer = BufWriter::new(output_file);
     camera.render_multi(14, &mut writer, Arc::new(bvh));
-    // camera.render(&mut writer, bvh);
 }

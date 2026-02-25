@@ -4,7 +4,7 @@ use crate::{
     math::{Color, Float, Ray, Vec3, dot, unit_vector},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Metal {
     albedo: Color,
     roughness: Float,

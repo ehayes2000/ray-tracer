@@ -36,9 +36,15 @@ impl AsMut<[Float; 3]> for Vec3 {
     }
 }
 
-impl From<[Float; 3]> for Vec3 {
-    fn from(value: [Float; 3]) -> Self {
-        Self(value[0], value[1], value[2])
+impl From<[f32; 3]> for Vec3 {
+    fn from(value: [f32; 3]) -> Self {
+        Self(value[0] as _, value[1] as _, value[2] as _)
+    }
+}
+
+impl From<[f64; 3]> for Vec3 {
+    fn from(value: [f64; 3]) -> Self {
+        Self(value[0] as _, value[1] as _, value[2] as _)
     }
 }
 

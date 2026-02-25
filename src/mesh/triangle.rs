@@ -5,12 +5,19 @@ use crate::{
     math::{Float, Interval, Point, Ray, Vec3, cross, dot},
 };
 use std::sync::Arc;
+
+#[derive(Clone, Debug, Default)]
+pub struct Vertex {
+    pub position: Point,
+    pub normal: Vec3,
+}
+
 // counter-clockwise winding front
 #[derive(Clone, Debug)]
 pub struct Triangle {
-    pub a: Point,
-    pub b: Point,
-    pub c: Point,
+    pub a: Vertex,
+    pub b: Vertex,
+    pub c: Vertex,
     pub bbox: Aabb,
     pub material: Arc<dyn Material>,
 }
@@ -22,8 +29,12 @@ pub struct TriHit {
 }
 
 impl Triangle {
-    pub fn new(a: Point, b: Point, c: Point, material: Arc<dyn Material>) -> Self {
-        let bbox = Aabb::empty().union_pt(&a).union_pt(&b).union_pt(&c).pad();
+    pub fn new(a: Vertex, b: Vertex, c: Vertex, material: Arc<dyn Material>) -> Self {
+        let bbox = Aabb::empty()
+            .union_pt(&a.position)
+            .union_pt(&b.position)
+            .union_pt(&c.position)
+            .pad();
         Self {
             a,
             b,
@@ -32,9 +43,10 @@ impl Triangle {
             material,
         }
     }
+
     pub fn moller_trumbore_intersection(&self, r: &Ray) -> Option<TriHit> {
-        let e1 = self.b - self.a;
-        let e2 = self.c - self.a;
+        let e1 = self.b.position - self.a.position;
+        let e2 = self.c.position - self.a.position;
 
         let ray_cross_e2 = cross(r.direction, e2);
         let det = dot(&e1, &ray_cross_e2);
@@ -44,9 +56,9 @@ impl Triangle {
         }
 
         let inv_det = 1.0 / det;
-        let s = r.origin - self.a;
+        let s = r.origin - self.a.position;
         let u = inv_det * dot(&s, &ray_cross_e2);
-        if !(0.0..1.0).contains(&u) {
+        if u < 0.0 || u > 1.0 {
             return None;
         }
 
@@ -55,13 +67,11 @@ impl Triangle {
         if v < 0.0 || u + v > 1.0 {
             return None;
         }
-        let outward_normal = cross(e1, e2).normalize();
-        let front_face = dot(&r.direction, &outward_normal) < 0.0;
-        let normal = if front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
+
+        let normal = self.a.normal * (1.0 - u - v) + self.b.normal * u + v * self.c.normal;
+        let front_face = dot(&r.direction, &normal) < 0.0;
+        let normal = if front_face { normal } else { -normal };
+
         let t = inv_det * dot(&e2, &s_cross_e1);
         if t > crate::math::EPSILON {
             Some(TriHit {
@@ -96,12 +106,18 @@ impl Triangle {
         })
     }
 
-    pub fn update_bbox(&mut self) {
+    pub(crate) fn update_bbox(&mut self) {
         self.bbox = Aabb::empty()
-            .union_pt(&self.a)
-            .union_pt(&self.b)
-            .union_pt(&self.c)
+            .union_pt(&self.a.position)
+            .union_pt(&self.b.position)
+            .union_pt(&self.c.position)
             .pad();
+    }
+
+    pub(crate) fn compute_normal(a: &Point, b: &Point, c: &Point) -> Vec3 {
+        let e1 = b - a;
+        let e2 = c - a;
+        cross(e1, e2).normalize()
     }
 }
 

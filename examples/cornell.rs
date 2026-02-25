@@ -3,7 +3,7 @@ use std::{fs::OpenOptions, io::BufWriter};
 use ray_tracer::{
     bvh::BvhBuilder,
     camera::{Camera, CameraParameters, RenderParameters},
-    material::{DiffuseLight, Lambertian, Materialify},
+    material::{DiffuseLight, Lambertian, Metal},
     mesh::Mesh,
     v3,
 };
@@ -11,10 +11,11 @@ use ray_tracer::{
 use std::sync::Arc;
 
 fn main() {
-    let red = Lambertian::new(v3!(0.65, 0.05, 0.05)).materialify();
-    let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
+    let red = Lambertian::new(v3!(0.65, 0.05, 0.05));
+    let white = Lambertian::new(v3!(0.73, 0.73, 0.73));
     let green = Lambertian::new(v3!(0.12, 0.45, 0.15));
     let light = DiffuseLight::new(v3!(15, 15, 15));
+    let mirror = Metal::new(v3!(1, 1, 1), 0.1);
 
     let world = BvhBuilder::new()
         // right wall
@@ -60,11 +61,11 @@ fn main() {
             white.clone(),
         ))
         .mesh(
-            Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), white.clone())
+            Mesh::volume(v3!(130, 0, 60), v3!(165, 165, 165), mirror.clone())
                 .rotate(v3!(0, -0.3, 0)),
         )
         .mesh(
-            Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), white.clone())
+            Mesh::volume(v3!(265, 0, 295), v3!(165, 330, 165), mirror.clone())
                 .rotate(v3!(0, 0.3, 0)),
         );
 
@@ -77,10 +78,10 @@ fn main() {
             focus_distance: 1.0,
         },
         RenderParameters {
-            image_width: 600.,
+            image_width: 1080.,
             aspect_ratio: 1.0,
             max_bounces: 25.,
-            samples_per_pixel: 14. * 3.,
+            samples_per_pixel: 14. * 50.,
             background_color: v3!(0, 0, 0),
         },
     );
