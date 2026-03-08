@@ -16,7 +16,7 @@ use crate::{
 #[macro_export]
 macro_rules! tri {
     ($a:expr, $b:expr, $c:expr, $m:expr) => {{
-        let normal = crate::mesh::Triangle::compute_normal(&$a, &$b, &$c);
+        let normal = $crate::mesh::Triangle::compute_normal(&$a, &$b, &$c);
         let a = crate::mesh::Vertex {
             position: $a,
             normal,

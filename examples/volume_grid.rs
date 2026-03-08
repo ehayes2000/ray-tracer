@@ -3,14 +3,14 @@ use std::{fs::OpenOptions, io::BufWriter};
 use ray_tracer::{
     bvh::BvhBuilder,
     camera::{Camera, CameraParameters, RenderParameters},
-    material::{DiffuseLight, Lambertian, Materialify},
+    material::{DiffuseLight, Lambertian},
     mesh::Mesh,
     v3,
 };
 use std::sync::Arc;
 
 fn main() {
-    let white = Lambertian::new(v3!(0.73, 0.73, 0.73)).materialify();
+    let white = Lambertian::new(v3!(0.73, 0.73, 0.73));
     let light_behind = DiffuseLight::new(v3!(10, 10, 10));
     let light_top = DiffuseLight::new(v3!(15, 4, 4)); // red
     let light_bottom = DiffuseLight::new(v3!(4, 15, 4)); // green

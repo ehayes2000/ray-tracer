@@ -3,7 +3,6 @@ use std::io::BufWriter;
 use ray_tracer::{
     bvh::BvhBuilder,
     camera::{Camera, CameraParameters, RenderParameters},
-    hittable_list::HittableList,
     material::Lambertian,
     mesh::Mesh,
     v3,
